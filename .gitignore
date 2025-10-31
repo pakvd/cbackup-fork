@@ -1,0 +1,17 @@
+.env
+vendor/
+*.log
+*.cache
+runtime/
+web/assets/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Избегаем вложенных git репозиториев
+core/modules/cds/content/.git
+core/data/backup/.git
+

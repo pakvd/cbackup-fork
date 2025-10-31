@@ -1,0 +1,941 @@
+/* Modern cBackup Interface Styles - 2024 */
+
+:root {
+    --primary-color: #4f46e5;
+    --primary-dark: #4338ca;
+    --primary-light: #818cf8;
+    --secondary-color: #10b981;
+    --accent-color: #f59e0b;
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global Styles */
+body {
+    background: var(--background);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+}
+
+/* Modern Wrapper - Override old AdminLTE styles */
+.skin-blue .wrapper,
+.modern-theme .wrapper,
+.skin-blue.modern-theme .wrapper {
+    background: var(--background) !important;
+    background-color: var(--background) !important;
+}
+
+/* Modern Sidebar - Override old AdminLTE styles */
+.skin-blue .main-sidebar,
+.modern-theme .main-sidebar,
+.skin-blue.modern-theme .main-sidebar {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+    box-shadow: var(--shadow-xl) !important;
+    width: 260px !important;
+    transition: var(--transition) !important;
+    border-right: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    z-index: 1000 !important;
+}
+
+/* When sidebar is collapsed - reduce shadow to prevent overlap */
+.skin-blue.sidebar-mini.sidebar-collapse .main-sidebar,
+.modern-theme.sidebar-mini.sidebar-collapse .main-sidebar,
+.skin-blue.modern-theme.sidebar-mini.sidebar-collapse .main-sidebar {
+    box-shadow: var(--shadow-md) !important;
+}
+
+/* Restore hover menu functionality when collapsed - restore AdminLTE behavior */
+.skin-blue.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > a > span:not(.pull-right),
+.skin-blue.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > .treeview-menu,
+.modern-theme.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > a > span:not(.pull-right),
+.modern-theme.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > .treeview-menu,
+.skin-blue.modern-theme.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > a > span:not(.pull-right),
+.skin-blue.modern-theme.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > .treeview-menu {
+    display: block !important;
+    z-index: 851 !important;
+    box-shadow: var(--shadow-xl) !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure menu items are clickable when collapsed - don't override AdminLTE rules */
+.skin-blue.sidebar-mini.sidebar-collapse .sidebar-menu > li > a,
+.modern-theme.sidebar-mini.sidebar-collapse .sidebar-menu > li > a,
+.skin-blue.modern-theme.sidebar-mini.sidebar-collapse .sidebar-menu > li > a {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Style hover menus when collapsed but don't break AdminLTE positioning */
+.skin-blue.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > .treeview-menu,
+.modern-theme.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > .treeview-menu,
+.skin-blue.modern-theme.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > .treeview-menu {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-xl) !important;
+}
+
+
+.skin-blue .sidebar,
+.modern-theme .sidebar,
+.skin-blue.modern-theme .sidebar {
+    padding: 1.5rem 0 !important;
+}
+
+.sidebar .user-panel {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1rem;
+}
+
+.sidebar .user-panel .info {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.sidebar-menu > li {
+    margin: 0.25rem 0;
+}
+
+/* Modern menu items - only apply when sidebar is NOT collapsed */
+.skin-blue .sidebar-menu > li > a,
+.modern-theme .sidebar-menu > li > a,
+.skin-blue.modern-theme .sidebar-menu > li > a {
+    color: rgba(255, 255, 255, 0.7) !important;
+    padding: 0.875rem 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    margin: 0 0.75rem !important;
+    transition: var(--transition) !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+}
+
+/* Only apply flex layout when NOT collapsed - preserve AdminLTE collapsed behavior */
+.skin-blue:not(.sidebar-collapse) .sidebar-menu > li > a,
+.modern-theme:not(.sidebar-collapse) .sidebar-menu > li > a,
+.skin-blue.modern-theme:not(.sidebar-collapse) .sidebar-menu > li > a {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+}
+
+/* When collapsed, ensure AdminLTE original behavior works - don't override */
+.skin-blue.sidebar-mini.sidebar-collapse .sidebar-menu > li > a {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    position: relative !important;
+    z-index: 1 !important;
+    /* Let AdminLTE handle display and positioning */
+}
+
+/* Modern hover effects - only apply when sidebar is NOT collapsed */
+.skin-blue:not(.sidebar-collapse) .sidebar-menu > li > a:hover,
+.modern-theme:not(.sidebar-collapse) .sidebar-menu > li > a:hover,
+.skin-blue.modern-theme:not(.sidebar-collapse) .sidebar-menu > li > a:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    transform: translateX(4px) !important;
+    border-left-color: transparent !important;
+}
+
+/* Don't override hover when collapsed - let AdminLTE handle it */
+.skin-blue.sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > a {
+    /* Allow AdminLTE original hover behavior */
+}
+
+/* Active state - only apply when sidebar is NOT collapsed */
+.skin-blue:not(.sidebar-collapse) .sidebar-menu > li.active > a,
+.skin-blue:not(.sidebar-collapse) .sidebar-menu > li.active > a:hover,
+.modern-theme:not(.sidebar-collapse) .sidebar-menu > li.active > a,
+.modern-theme:not(.sidebar-collapse) .sidebar-menu > li.active > a:hover,
+.skin-blue.modern-theme:not(.sidebar-collapse) .sidebar-menu > li.active > a,
+.skin-blue.modern-theme:not(.sidebar-collapse) .sidebar-menu > li.active > a:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
+    color: #ffffff !important;
+    box-shadow: var(--shadow-md) !important;
+    border-left-color: transparent !important;
+}
+
+.sidebar-menu > li > a > i {
+    width: 20px;
+    text-align: center;
+    font-size: 1.125rem;
+}
+
+/* Treeview menu - Override old AdminLTE styles */
+.skin-blue .treeview-menu,
+.modern-theme .treeview-menu,
+.skin-blue.modern-theme .treeview-menu {
+    background: rgba(0, 0, 0, 0.2) !important;
+    margin: 0.5rem 0.75rem !important;
+    border-radius: var(--radius-md) !important;
+    padding: 0.5rem 0 !important;
+}
+
+.skin-blue .treeview-menu > li > a,
+.modern-theme .treeview-menu > li > a,
+.skin-blue.modern-theme .treeview-menu > li > a {
+    color: rgba(255, 255, 255, 0.6) !important;
+    padding: 0.625rem 1rem 0.625rem 3rem !important;
+    transition: var(--transition) !important;
+}
+
+.skin-blue .treeview-menu > li > a:hover,
+.modern-theme .treeview-menu > li > a:hover,
+.skin-blue.modern-theme .treeview-menu > li > a:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    padding-left: 3.5rem !important;
+}
+
+.skin-blue .treeview-menu > li.active > a,
+.modern-theme .treeview-menu > li.active > a,
+.skin-blue.modern-theme .treeview-menu > li.active > a {
+    color: var(--primary-light) !important;
+    font-weight: 500 !important;
+}
+
+/* Modern Header - Override old AdminLTE styles */
+.skin-blue .main-header,
+.modern-theme .main-header,
+.skin-blue.modern-theme .main-header {
+    background: var(--surface) !important;
+    box-shadow: var(--shadow-md) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.skin-blue .main-header .logo,
+.modern-theme .main-header .logo,
+.skin-blue.modern-theme .main-header .logo {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+    background-color: #222d32 !important;
+    color: #ffffff !important;
+    font-weight: 300 !important;
+    font-size: 2.1875rem !important;
+    padding: 0 !important;
+    display: block !important;
+    align-items: center !important;
+    transition: var(--transition) !important;
+    border-bottom: none !important;
+    border-radius: 0 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 260px !important;
+    height: 50px !important;
+    z-index: 1003 !important;
+    overflow: visible !important;
+    line-height: 50px !important;
+    text-align: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+}
+
+/* Fix corner color issue - ensure smooth transition between logo and navbar */
+.skin-blue .main-header .logo::after,
+.modern-theme .main-header .logo::after,
+.skin-blue.modern-theme .main-header .logo::after {
+    display: none !important;
+}
+
+.skin-blue .main-header,
+.modern-theme .main-header,
+.skin-blue.modern-theme .main-header {
+    background: var(--surface) !important;
+    box-shadow: var(--shadow-md) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 260px !important;
+    right: 0 !important;
+    height: 50px !important;
+    z-index: 1002 !important;
+}
+
+/* Ensure navbar aligns properly with logo */
+.skin-blue .main-header .navbar,
+.modern-theme .main-header .navbar,
+.skin-blue.modern-theme .main-header .navbar {
+    padding: 0.75rem 1.5rem !important;
+    background: var(--surface) !important;
+    background-color: var(--surface) !important;
+    border-bottom: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    position: relative !important;
+    z-index: 1004 !important;
+    overflow: visible !important;
+}
+
+.skin-blue .main-header .logo:hover,
+.modern-theme .main-header .logo:hover,
+.skin-blue.modern-theme .main-header .logo:hover {
+    opacity: 0.9 !important;
+    transform: scale(1.02) !important;
+    background-color: transparent !important;
+}
+
+/* Logo text visibility - always show logo-lg */
+.skin-blue .main-header .logo,
+.modern-theme .main-header .logo,
+.skin-blue.modern-theme .main-header .logo {
+    width: 260px !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
+    height: 50px !important;
+    display: block !important;
+    overflow: visible !important;
+}
+
+.skin-blue .main-header .logo .logo-lg,
+.modern-theme .main-header .logo .logo-lg,
+.skin-blue.modern-theme .main-header .logo .logo-lg {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #ffffff !important;
+    font-size: 2.1875rem !important;
+    font-weight: 300 !important;
+    line-height: 50px !important;
+    padding: 0 1.5rem !important;
+    text-align: center !important;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+}
+
+.skin-blue .main-header .logo .logo-mini,
+.modern-theme .main-header .logo .logo-mini,
+.skin-blue.modern-theme .main-header .logo .logo-mini {
+    display: none !important;
+}
+
+/* Navbar - Override old AdminLTE styles */
+.skin-blue .navbar,
+.modern-theme .navbar,
+.skin-blue.modern-theme .navbar,
+.skin-blue .main-header .navbar,
+.modern-theme .main-header .navbar,
+.skin-blue.modern-theme .main-header .navbar {
+    padding: 0.75rem 1.5rem !important;
+    background: var(--surface) !important;
+    background-color: var(--surface) !important;
+    border-bottom: none !important;
+}
+
+.skin-blue .main-header .navbar .nav > li > a,
+.modern-theme .main-header .navbar .nav > li > a,
+.skin-blue.modern-theme .main-header .navbar .nav > li > a {
+    color: var(--text-primary) !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    z-index: 1005 !important;
+    position: relative !important;
+    text-decoration: none !important;
+}
+
+.skin-blue .main-header .navbar .nav > li > a:hover,
+.skin-blue .main-header .navbar .nav > li > a:active,
+.skin-blue .main-header .navbar .nav > li > a:focus,
+.modern-theme .main-header .navbar .nav > li > a:hover,
+.modern-theme .main-header .navbar .nav > li > a:active,
+.modern-theme .main-header .navbar .nav > li > a:focus,
+.skin-blue.modern-theme .main-header .navbar .nav > li > a:hover,
+.skin-blue.modern-theme .main-header .navbar .nav > li > a:active,
+.skin-blue.modern-theme .main-header .navbar .nav > li > a:focus {
+    background: var(--background) !important;
+    color: var(--primary-color) !important;
+}
+
+/* Ensure navbar is properly positioned */
+.skin-blue .main-header .navbar,
+.modern-theme .main-header .navbar,
+.skin-blue.modern-theme .main-header .navbar {
+    margin-left: 0 !important;
+    position: relative !important;
+    z-index: 1004 !important;
+    overflow: visible !important;
+}
+
+/* Ensure dropdown menus are clickable and openable */
+.skin-blue .main-header .navbar .nav > li.dropdown,
+.modern-theme .main-header .navbar .nav > li.dropdown,
+.skin-blue.modern-theme .main-header .navbar .nav > li.dropdown,
+.skin-blue .main-header .navbar .nav > li.classic-menu-dropdown,
+.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown,
+.skin-blue.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown {
+    position: relative !important;
+    z-index: 1005 !important;
+    pointer-events: auto !important;
+}
+
+.skin-blue .main-header .navbar .nav > li.dropdown > a,
+.modern-theme .main-header .navbar .nav > li.dropdown > a,
+.skin-blue.modern-theme .main-header .navbar .nav > li.dropdown > a,
+.skin-blue .main-header .navbar .nav > li.classic-menu-dropdown > a,
+.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown > a,
+.skin-blue.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown > a {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    z-index: 1006 !important;
+    position: relative !important;
+    text-decoration: none !important;
+    display: block !important;
+}
+
+.skin-blue .main-header .navbar .nav > li.dropdown > a:hover,
+.modern-theme .main-header .navbar .nav > li.dropdown > a:hover,
+.skin-blue.modern-theme .main-header .navbar .nav > li.dropdown > a:hover,
+.skin-blue .main-header .navbar .nav > li.classic-menu-dropdown > a:hover,
+.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown > a:hover,
+.skin-blue.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown > a:hover {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+.skin-blue .main-header .navbar .nav > li.dropdown.open > a,
+.modern-theme .main-header .navbar .nav > li.dropdown.open > a,
+.skin-blue.modern-theme .main-header .navbar .nav > li.dropdown.open > a,
+.skin-blue .main-header .navbar .nav > li.classic-menu-dropdown.open > a,
+.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown.open > a,
+.skin-blue.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown.open > a {
+    z-index: 1007 !important;
+    pointer-events: auto !important;
+}
+
+/* Hide sidebar toggle button */
+.skin-blue .navbar .sidebar-toggle,
+.modern-theme .navbar .sidebar-toggle,
+.skin-blue.modern-theme .navbar .sidebar-toggle,
+.skin-blue .main-header .navbar .sidebar-toggle,
+.modern-theme .main-header .navbar .sidebar-toggle,
+.skin-blue.modern-theme .main-header .navbar .sidebar-toggle {
+    display: none !important;
+}
+
+/* Legacy styles - hidden */
+.sidebar-toggle {
+    background: transparent !important;
+    border: none !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: var(--transition) !important;
+    color: var(--text-primary) !important;
+    float: left !important;
+    /* Remove Font Awesome icon from :before */
+}
+
+/* Remove duplicate icon from :before pseudo-element */
+.skin-blue .main-header .navbar .sidebar-toggle:before,
+.modern-theme .main-header .navbar .sidebar-toggle:before,
+.skin-blue.modern-theme .main-header .navbar .sidebar-toggle:before {
+    content: none !important;
+    display: none !important;
+}
+
+.skin-blue .navbar .sidebar-toggle:hover,
+.modern-theme .navbar .sidebar-toggle:hover,
+.skin-blue.modern-theme .navbar .sidebar-toggle:hover,
+.skin-blue .main-header .navbar .sidebar-toggle:hover,
+.modern-theme .main-header .navbar .sidebar-toggle:hover,
+.skin-blue.modern-theme .main-header .navbar .sidebar-toggle:hover {
+    background: var(--background) !important;
+    background-color: var(--background) !important;
+    color: var(--primary-color) !important;
+}
+
+/* Show icon-bar hamburger menu */
+.skin-blue .navbar .sidebar-toggle .icon-bar,
+.modern-theme .navbar .sidebar-toggle .icon-bar,
+.skin-blue.modern-theme .navbar .sidebar-toggle .icon-bar,
+.skin-blue .main-header .navbar .sidebar-toggle .icon-bar,
+.modern-theme .main-header .navbar .sidebar-toggle .icon-bar,
+.skin-blue.modern-theme .main-header .navbar .sidebar-toggle .icon-bar {
+    background: var(--text-primary) !important;
+    height: 2px !important;
+    width: 20px !important;
+    border-radius: 2px !important;
+    display: block !important;
+    margin: 4px 0 !important;
+    transition: var(--transition) !important;
+}
+
+.skin-blue .navbar .sidebar-toggle:hover .icon-bar,
+.modern-theme .navbar .sidebar-toggle:hover .icon-bar,
+.skin-blue.modern-theme .navbar .sidebar-toggle:hover .icon-bar,
+.skin-blue .main-header .navbar .sidebar-toggle:hover .icon-bar,
+.modern-theme .main-header .navbar .sidebar-toggle:hover .icon-bar,
+.skin-blue.modern-theme .main-header .navbar .sidebar-toggle:hover .icon-bar {
+    background: var(--primary-color) !important;
+}
+
+/* Dropdown menu - only for navbar dropdowns */
+.navbar .dropdown-menu {
+    border: none !important;
+    box-shadow: var(--shadow-xl) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 0.5rem !important;
+    margin-top: 0.5rem !important;
+    z-index: 1050 !important;
+    pointer-events: auto !important;
+    position: absolute !important;
+    display: none !important;
+    background: var(--surface) !important;
+    min-width: 200px !important;
+}
+
+/* Show navbar dropdown menu only when parent is open */
+.navbar .dropdown.open > .dropdown-menu {
+    display: block !important;
+}
+
+/* Don't interfere with Bootstrap dropdowns outside navbar */
+/* Bootstrap handles these automatically - no custom CSS needed */
+
+/* Dropdown menu items - only for navbar */
+.navbar .dropdown-menu > li > a {
+    padding: 0.75rem 1rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: var(--transition) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    color: var(--text-primary) !important;
+}
+
+.navbar .dropdown-menu > li > a:hover,
+.navbar .dropdown-menu > li > a:focus {
+    background: var(--background) !important;
+    color: var(--primary-color) !important;
+}
+
+.navbar .dropdown-menu > li > a > i {
+    width: 20px !important;
+    color: var(--text-secondary) !important;
+}
+
+/* Ensure dropdown menus are visible when open */
+.skin-blue .main-header .navbar .nav > li.dropdown.open .dropdown-menu,
+.modern-theme .main-header .navbar .nav > li.dropdown.open .dropdown-menu,
+.skin-blue.modern-theme .main-header .navbar .nav > li.dropdown.open .dropdown-menu,
+.skin-blue .main-header .navbar .nav > li.classic-menu-dropdown.open .dropdown-menu,
+.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown.open .dropdown-menu,
+.skin-blue.modern-theme .main-header .navbar .nav > li.classic-menu-dropdown.open .dropdown-menu {
+    display: block !important;
+    z-index: 1010 !important;
+    pointer-events: auto !important;
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Content Wrapper - Override old AdminLTE styles */
+.skin-blue .content-wrapper,
+.modern-theme .content-wrapper,
+.skin-blue.modern-theme .content-wrapper {
+    background: var(--background) !important;
+    background-color: var(--background) !important;
+    padding: 2rem !important;
+    margin-left: 260px !important;
+    margin-top: 50px !important;
+    min-height: calc(100vh - 50px) !important;
+}
+
+/* Modern Cards - Override old AdminLTE styles */
+.skin-blue .box,
+.skin-blue .panel,
+.modern-theme .box,
+.modern-theme .panel,
+.skin-blue.modern-theme .box,
+.skin-blue.modern-theme .panel {
+    background: var(--surface) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-md) !important;
+    border: 1px solid var(--border-color) !important;
+    transition: var(--transition) !important;
+    overflow: hidden !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.skin-blue .box:hover,
+.skin-blue .panel:hover,
+.modern-theme .box:hover,
+.modern-theme .panel:hover,
+.skin-blue.modern-theme .box:hover,
+.skin-blue.modern-theme .panel:hover {
+    box-shadow: var(--shadow-lg) !important;
+    transform: translateY(-2px) !important;
+}
+
+.skin-blue .box-header,
+.skin-blue .panel-heading,
+.modern-theme .box-header,
+.modern-theme .panel-heading,
+.skin-blue.modern-theme .box-header,
+.skin-blue.modern-theme .panel-heading {
+    padding: 1.25rem 1.5rem !important;
+    background: linear-gradient(135deg, var(--background) 0%, var(--surface) 100%) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+}
+
+.box-body,
+.panel-body,
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Modern Buttons - Override old Bootstrap styles */
+.skin-blue .btn,
+.modern-theme .btn,
+.skin-blue.modern-theme .btn {
+    border-radius: var(--radius-md) !important;
+    padding: 0.625rem 1.25rem !important;
+    font-weight: 500 !important;
+    transition: var(--transition) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.skin-blue .btn:hover,
+.modern-theme .btn:hover,
+.skin-blue.modern-theme .btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.skin-blue .btn-primary,
+.modern-theme .btn-primary,
+.skin-blue.modern-theme .btn-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+.skin-blue .btn-primary:hover,
+.modern-theme .btn-primary:hover,
+.skin-blue.modern-theme .btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%) !important;
+    color: #ffffff !important;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #059669 100%);
+    color: #ffffff;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, var(--accent-color) 0%, #d97706 100%);
+    color: #ffffff;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+}
+
+.btn-default {
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+/* Modern Tables - Override old Bootstrap styles */
+.skin-blue .table,
+.modern-theme .table,
+.skin-blue.modern-theme .table {
+    background: var(--surface) !important;
+    border-radius: var(--radius-md) !important;
+    overflow: hidden !important;
+}
+
+.table thead {
+    background: var(--background);
+}
+
+.table thead th {
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.table tbody tr {
+    transition: var(--transition);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table tbody tr:hover {
+    background: var(--background);
+}
+
+.table tbody td {
+    padding: 1rem;
+    color: var(--text-secondary);
+}
+
+/* Modern Forms - Override old Bootstrap styles */
+.skin-blue .form-control,
+.skin-blue select.form-control,
+.modern-theme .form-control,
+.modern-theme select.form-control,
+.skin-blue.modern-theme .form-control,
+.skin-blue.modern-theme select.form-control {
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 0.625rem 0.875rem !important;
+    transition: var(--transition) !important;
+    background: var(--surface) !important;
+}
+
+.skin-blue .form-control:focus,
+.modern-theme .form-control:focus,
+.skin-blue.modern-theme .form-control:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
+    outline: none !important;
+}
+
+.form-group label {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+/* Alerts - Override old Bootstrap styles */
+.skin-blue .alert,
+.modern-theme .alert,
+.skin-blue.modern-theme .alert {
+    border-radius: var(--radius-md) !important;
+    border: none !important;
+    padding: 1rem 1.25rem !important;
+    box-shadow: var(--shadow-sm) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+}
+
+/* Breadcrumbs */
+.content-header {
+    margin-bottom: 2rem;
+}
+
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+}
+
+.breadcrumb > li {
+    color: var(--text-secondary);
+}
+
+.breadcrumb > li > a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.breadcrumb > li > a:hover {
+    color: var(--primary-dark);
+}
+
+.breadcrumb > li.active {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Pagination */
+.pagination > li > a,
+.pagination > li > span {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    margin: 0 0.25rem;
+    transition: var(--transition);
+}
+
+.pagination > li > a:hover {
+    background: var(--background);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.pagination > .active > a,
+.pagination > .active > span {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+/* Badges */
+.badge {
+    border-radius: var(--radius-sm);
+    padding: 0.25rem 0.625rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.badge-success {
+    background: var(--secondary-color);
+    color: #ffffff;
+}
+
+.badge-danger {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.badge-warning {
+    background: var(--accent-color);
+    color: #ffffff;
+}
+
+.badge-info {
+    background: var(--primary-color);
+    color: #ffffff;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.content {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .main-sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar-open .main-sidebar {
+        transform: translateX(0);
+    }
+    
+    .content-wrapper {
+        padding: 1rem;
+    }
+    
+    .logo-lg {
+        display: none;
+    }
+    
+    .logo-mini {
+        display: inline;
+    }
+}
+
+/* Utilities */
+.shadow-sm {
+    box-shadow: var(--shadow-sm);
+}
+
+.shadow-md {
+    box-shadow: var(--shadow-md);
+}
+
+.shadow-lg {
+    box-shadow: var(--shadow-lg);
+}
+
+.rounded {
+    border-radius: var(--radius-md);
+}
+
+.rounded-lg {
+    border-radius: var(--radius-lg);
+}
+
+/* Gradient text */
+.text-gradient {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Modern scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+

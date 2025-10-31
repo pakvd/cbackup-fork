@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+*.md
+!README.md
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+core/runtime/*
+core/web/assets/*
+core/vendor/
+worker/target/
+
