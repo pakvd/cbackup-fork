@@ -75,7 +75,7 @@ class SystemController extends Controller
             'searchModel'  => $searchModel,
             'users'        => (new User())->getUsers('name'),
             'severities'   => ArrayHelper::map(Severity::find()->all(), 'name', 'name'),
-            'actions'      => LogSystem::find()->select('action')->indexBy('action')->asArray()->column()
+            'actions'      => LogSystem::find()->select('category')->distinct()->where(['IS NOT', 'category', null])->indexBy('category')->asArray()->column()
         ]);
     }
 

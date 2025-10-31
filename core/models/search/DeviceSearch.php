@@ -57,15 +57,32 @@ class DeviceSearch extends Device
      */
     public function search($params)
     {
-        $query = Device::find();
+        $query = Device::find()->with('vendor');
 
+        // Join with vendor for filtering and sorting
+        $query->joinWith('vendor');
+        
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort'  => [
                 'defaultOrder' => [
                     'vendor' => SORT_ASC,
-                    'model'  => SORT_ASC
-                ]
+                    'model' => SORT_ASC
+                ],
+                'attributes' => [
+                    'vendor' => [
+                        'asc' => ['vendor.name' => SORT_ASC],
+                        'desc' => ['vendor.name' => SORT_DESC],
+                        'label' => 'Vendor',
+                    ],
+                    'model' => [
+                        'asc' => ['device.name' => SORT_ASC],
+                        'desc' => ['device.name' => SORT_DESC],
+                        'label' => 'Model',
+                    ],
+                    'id',
+                    'auth_template_name',
+                ],
             ],
         ]);
 
@@ -77,12 +94,12 @@ class DeviceSearch extends Device
 
         // grid filtering conditions
         $query->andFilterWhere([
-            'id' => $this->id,
+            'device.id' => $this->id,
         ]);
-
-        $query->andFilterWhere(['like', 'vendor', $this->vendor])
-            ->andFilterWhere(['like', 'model', $this->model])
-            ->andFilterWhere(['like', 'auth_template_name', $this->auth_template_name]);
+        
+        $query->andFilterWhere(['like', 'vendor.name', $this->vendor])
+            ->andFilterWhere(['like', 'device.name', $this->model])
+            ->andFilterWhere(['like', 'device.auth_template_name', $this->auth_template_name]);
 
         return $dataProvider;
     }

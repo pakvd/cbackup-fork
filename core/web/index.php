@@ -45,14 +45,29 @@ defined('YII_ENV') or define('YII_ENV', getenv('YII_ENV') ?: 'prod');
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
 
 // Register custom error handler to suppress deprecated warnings
+// Note: Fatal errors like "Array and string offset access syntax with curly braces" 
+// cannot be caught by set_error_handler, they are handled by register_shutdown_function
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     // Suppress deprecated warnings (E_DEPRECATED = 8192)
     if ($errno === E_DEPRECATED) {
         return true; // Suppress the warning
     }
+    // Log all other errors to help debug
+    error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
     // Let other errors pass through
     return false;
 }, E_DEPRECATED);
+
+// Register shutdown function to catch fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        $logFile = __DIR__ . '/../runtime/logs/app.log';
+        $logMessage = date('Y-m-d H:i:s') . " [FATAL] {$error['message']} in {$error['file']}:{$error['line']}\n";
+        @file_put_contents($logFile, $logMessage, FILE_APPEND);
+        error_log("Fatal Error: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
+    }
+});
 
 require(__DIR__ . '/../vendor/autoload.php');
 require(__DIR__ . '/../vendor/yiisoft/yii2/Yii.php');

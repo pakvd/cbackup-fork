@@ -253,9 +253,20 @@ class DeviceController extends Controller
             }
         }
 
+        // Group devices by vendor using callback
+        $devices = Device::find()->with('vendor')->all();
+        $groupedDevices = [];
+        foreach ($devices as $device) {
+            $vendorName = $device->vendor ? $device->vendor->name : 'Unknown';
+            if (!isset($groupedDevices[$vendorName])) {
+                $groupedDevices[$vendorName] = [];
+            }
+            $groupedDevices[$vendorName][$device->id] = $device->name;
+        }
+        
         return $this->render('_form_unknown', [
             'model'   => $model,
-            'devices' => ArrayHelper::map(Device::find()->all(), 'id', 'model', 'vendor')
+            'devices' => $groupedDevices
         ]);
     }
 
@@ -290,9 +301,20 @@ class DeviceController extends Controller
             }
         }
 
+        // Group devices by vendor using callback
+        $devices = Device::find()->with('vendor')->all();
+        $groupedDevices = [];
+        foreach ($devices as $device) {
+            $vendorName = $device->vendor ? $device->vendor->name : 'Unknown';
+            if (!isset($groupedDevices[$vendorName])) {
+                $groupedDevices[$vendorName] = [];
+            }
+            $groupedDevices[$vendorName][$device->id] = $device->name;
+        }
+        
         return $this->render('_form_unknown', [
             'model'   => $model,
-            'devices' => ArrayHelper::map(Device::find()->all(), 'id', 'model', 'vendor')
+            'devices' => $groupedDevices
         ]);
 
     }
@@ -366,11 +388,20 @@ class DeviceController extends Controller
      */
     public function actionAjaxUpdateDevices()
     {
-        $devices = ArrayHelper::index(Device::find()->select('id, model as text, vendor')->orderBy('id')->asArray()->all(), null, 'vendor');
+        // Get devices with vendor relation
+        $devices = Device::find()
+            ->select(['device.id', 'device.name as text', 'vendor.name as vendor'])
+            ->joinWith('vendor')
+            ->orderBy('vendor.name, device.name')
+            ->asArray()
+            ->all();
+        
+        // Group by vendor
+        $grouped = ArrayHelper::index($devices, null, 'vendor');
         $result  = [];
         /** Create acceptable data array for select2 */
-        foreach ($devices as $vendor => $models) {
-            $result[] = ['text' => $vendor, 'children' => $models];
+        foreach ($grouped as $vendor => $models) {
+            $result[] = ['text' => $vendor, 'children' => array_values($models)];
         }
         return Json::encode($result);
     }

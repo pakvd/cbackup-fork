@@ -521,7 +521,7 @@ class TaskController extends Controller
      */
     protected function findModel($name)
     {
-        if (($model = Task::findOne($name)) !== null) {
+        if (($model = Task::findOne(['name' => $name])) !== null) {
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');

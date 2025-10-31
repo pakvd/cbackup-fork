@@ -76,8 +76,18 @@ $this->params['breadcrumbs'][] = $this->title;
                                     ]);
                                 },
                             ],
-                            'vendor',
-                            'model',
+                            [
+                                'attribute' => 'vendor',
+                                'value' => function($model) { /** @var $model \app\models\Device */
+                                    return $model->vendorName ?: 'Unknown';
+                                },
+                            ],
+                            [
+                                'attribute' => 'model',
+                                'value' => function($model) { /** @var $model \app\models\Device */
+                                    return $model->name;
+                                },
+                            ],
                             [
                                 'attribute'     => 'auth_template_name',
                             ],

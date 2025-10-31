@@ -77,13 +77,30 @@ class CustomDeviceSearch extends Device
     public function search($params)
     {
 
-        $query = Device::find();
+        $query = Device::find()
+            ->select(['device.*', 'vendor.name as vendor'])
+            ->joinWith('vendor');
 
         $this->load($params);
 
-        $query->andFilterWhere(['like', 'vendor', $this->vendor]);
+        $query->andFilterWhere(['like', 'vendor.name', $this->vendor]);
 
-        $data = $query->orderBy('vendor')->asArray()->all();
+        $data = $query->asArray()->all();
+        
+        // Ensure vendor and model fields are set
+        foreach ($data as $key => $entry) {
+            if (!isset($data[$key]['vendor'])) {
+                $data[$key]['vendor'] = 'Unknown';
+            }
+            if (!isset($data[$key]['model'])) {
+                $data[$key]['model'] = $data[$key]['name'] ?? '';
+            }
+        }
+        
+        // Sort by vendor name
+        usort($data, function($a, $b) {
+            return strcmp($a['vendor'] ?? '', $b['vendor'] ?? '');
+        });
 
         $this->task_name   = $params['task_name'];
         $this->worker_id   = $params['worker_id'];

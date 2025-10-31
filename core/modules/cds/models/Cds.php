@@ -165,8 +165,22 @@ class Cds extends Model
                 return $this->initGitRepo();
             }
 
+            /** Get git path - use default if empty */
+            $gitPath = \Y::param('gitPath');
+            if (empty($gitPath)) {
+                // Try common git locations
+                $possiblePaths = ['/usr/bin/git', '/usr/local/bin/git'];
+                $gitPath = 'git'; // Default fallback
+                foreach ($possiblePaths as $path) {
+                    if (@is_executable($path)) {
+                        $gitPath = $path;
+                        break;
+                    }
+                }
+            }
+
             /** Init Git wrapper */
-            $wrapper = new GitWrapper(\Y::param('gitPath'));
+            $wrapper = new GitWrapper($gitPath);
 
             /** Get working copy */
             $git = $wrapper->workingCopy($this->content_dir);
@@ -254,8 +268,22 @@ class Cds extends Model
     {
         try {
 
+            /** Get git path - use default if empty */
+            $gitPath = \Y::param('gitPath');
+            if (empty($gitPath)) {
+                // Try common git locations
+                $possiblePaths = ['/usr/bin/git', '/usr/local/bin/git'];
+                $gitPath = 'git'; // Default fallback
+                foreach ($possiblePaths as $path) {
+                    if (@is_executable($path)) {
+                        $gitPath = $path;
+                        break;
+                    }
+                }
+            }
+
             /** Init Git wrapper */
-            $wrapper = new GitWrapper(\Y::param('gitPath'));
+            $wrapper = new GitWrapper($gitPath);
 
             /** Init Git repo */
             $git = $wrapper->init($this->content_dir);

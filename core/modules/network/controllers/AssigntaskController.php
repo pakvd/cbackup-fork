@@ -113,7 +113,18 @@ class AssigntaskController extends Controller
 
         if (in_array($event->id, $actions)) {
             $tasks = Task::find()->select('name')->indexBy('name')->where(['!=', 'task_type', 'yii_console_task'])->asArray()->column();
-            $this->devices_list = ArrayHelper::map(Device::find()->all(), 'id', 'model', 'vendor');
+            
+            // Group devices by vendor using callback
+            $devices = Device::find()->with('vendor')->all();
+            $groupedDevices = [];
+            foreach ($devices as $device) {
+                $vendorName = $device->vendor ? $device->vendor->name : 'Unknown';
+                if (!isset($groupedDevices[$vendorName])) {
+                    $groupedDevices[$vendorName] = [];
+                }
+                $groupedDevices[$vendorName][$device->id] = $device->name;
+            }
+            $this->devices_list = $groupedDevices;
             $this->tasks_list   = array_diff($tasks, \Y::param('forbidden_tasks_list'));
         }
 
@@ -464,10 +475,21 @@ class AssigntaskController extends Controller
         $searchModel  = new CustomDeviceSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
+        // Group data by vendor for display
+        $models = $dataProvider->getModels();
+        $groupedData = [];
+        foreach ($models as $model) {
+            $vendorName = isset($model['vendor']) ? $model['vendor'] : 'Unknown';
+            if (!isset($groupedData[$vendorName])) {
+                $groupedData[$vendorName] = [];
+            }
+            $groupedData[$vendorName][] = $model;
+        }
+        
         return $this->render('adv_device_assign',[
             'dataProvider' => $dataProvider,
             'searchModel'  => $searchModel,
-            'data'         => ArrayHelper::index($dataProvider->getModels(), null, 'vendor'),
+            'data'         => $groupedData,
             'tasks_list'   => $this->tasks_list,
             'vendors_list' => Vendor::find()->select('name')->indexBy('name')->asArray()->column()
         ]);

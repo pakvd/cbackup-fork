@@ -31,6 +31,12 @@ use app\models\LogSystem;
 class LogSystemSearch extends LogSystem
 {
     /**
+     * Virtual property for compatibility - maps to category field
+     * @var string|null
+     */
+    public $action;
+    
+    /**
      * @inheritdoc
      */
     public function rules()
@@ -94,7 +100,7 @@ class LogSystemSearch extends LogSystem
 
         $query->andFilterWhere(['like', 'userid', $this->userid])
             ->andFilterWhere(['like', 'severity', $this->severity])
-            ->andFilterWhere(['like', 'action', $this->action])
+            ->andFilterWhere(['like', 'category', $this->action]) // action is mapped to category field
             ->andFilterWhere(['like', 'message', $this->message]);
 
         return $dataProvider;

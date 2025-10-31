@@ -395,8 +395,24 @@ class UserController extends Controller
 
         }
 
+        $data = Setting::getSettingsForUser();
+        
+        // Ensure all required keys exist with default values
+        $defaults = [
+            'sidebar_collapsed' => '0',
+            'language' => 'en-US',
+            'date' => 'Y-m-d',
+            'datetime' => 'Y-m-d H:i:s',
+        ];
+        
+        foreach ($defaults as $key => $defaultValue) {
+            if (!isset($data[$key]) || $data[$key] === null) {
+                $data[$key] = $defaultValue;
+            }
+        }
+        
         return $this->render('settings', [
-            'data' => Setting::getSettingsForUser(),
+            'data' => $data,
         ]);
 
     }

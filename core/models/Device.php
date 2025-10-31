@@ -58,21 +58,27 @@ class Device extends ActiveRecord
     }
 
     /**
-     * @inheritdoc
+     * Virtual properties for compatibility
+     * @var string|null
      */
+    public $vendor;
+    public $model;
+    
     public function rules()
     {
         return [
-            [['vendor', 'model', 'auth_template_name'], 'required'],
-            [['model'], 'filter', 'filter' => 'trim'],
-            [['vendor', 'auth_template_name'], 'string', 'max' => 64],
-            [['model'], 'string', 'max' => 128],
+            [['vendor_id', 'name', 'auth_template_name'], 'required'],
+            [['name'], 'filter', 'filter' => 'trim'],
+            [['auth_template_name'], 'string', 'max' => 64],
+            [['name'], 'string', 'max' => 128],
+            [['vendor_id'], 'integer'],
             [['auth_template_name'], 'exist', 'skipOnError' => true, 'targetClass' => DeviceAuthTemplate::class, 'targetAttribute' => ['auth_template_name' => 'name']],
-            [['vendor'], 'exist', 'skipOnError' => true, 'targetClass' => Vendor::class, 'targetAttribute' => ['vendor' => 'name']],
-            [['vendor', 'model'], 'unique', 'targetAttribute' => ['vendor', 'model'], 'message' => 'The combination of Vendor and Model has already been taken.'],
-            [['model'], 'match', 'pattern' => '/^[a-z](?!.*[\-_]{2,})[\w\-]*/i',
+            [['vendor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Vendor::class, 'targetAttribute' => ['vendor_id' => 'id']],
+            [['vendor_id', 'name'], 'unique', 'targetAttribute' => ['vendor_id', 'name'], 'message' => 'The combination of Vendor and Model has already been taken.'],
+            [['name'], 'match', 'pattern' => '/^[a-z](?!.*[\-_]{2,})[\w\-]*/i',
                 'message' => Yii::t('network', 'Device name should start with letter, contain only a-z, 0-9 and non-repeating hyphens and/or underscores')
             ],
+            [['vendor', 'model'], 'safe'], // Virtual properties
         ];
     }
 
@@ -83,11 +89,24 @@ class Device extends ActiveRecord
     {
         return [
             'id'                 => Yii::t('app', 'ID'),
+            'vendor_id'          => Yii::t('network', 'Vendor'),
             'vendor'             => Yii::t('network', 'Vendor'),
+            'name'               => Yii::t('network', 'Model'),
             'model'              => Yii::t('network', 'Model'),
             'auth_template_name' => Yii::t('network', 'Auth template name'),
+            'description'        => Yii::t('app', 'Description'),
             'page_size'          => Yii::t('app', 'Page size'),
         ];
+    }
+    
+    /**
+     * Override afterFind to populate virtual properties
+     */
+    public function afterFind()
+    {
+        parent::afterFind();
+        $this->vendor = $this->vendorName;
+        $this->model = $this->name;
     }
 
     /**
@@ -99,11 +118,39 @@ class Device extends ActiveRecord
     }
 
     /**
+     * Get vendor relation
      * @return \yii\db\ActiveQuery
+     */
+    public function getVendor()
+    {
+        return $this->hasOne(Vendor::class, ['id' => 'vendor_id']);
+    }
+    
+    /**
+     * Get vendor name (virtual property)
+     * @return string|null
      */
     public function getVendorName()
     {
-        return $this->hasOne(Vendor::class, ['name' => 'vendor']);
+        return $this->vendor ? $this->vendor->name : null;
+    }
+    
+    /**
+     * Virtual property: vendor (alias for vendor name)
+     * @return string|null
+     */
+    public function getVendorProperty()
+    {
+        return $this->vendorName;
+    }
+    
+    /**
+     * Virtual property: model (alias for name)
+     * @return string|null
+     */
+    public function getModel()
+    {
+        return $this->name;
     }
 
     /**

@@ -98,7 +98,7 @@ class Setting extends ActiveRecord
      * To avoid unnecessary database poking, keys are stored in the user session after first request
      *
      * @param  string $key
-     * @return string|int
+     * @return string|int|null
      */
     public static function get($key)
     {
@@ -122,11 +122,15 @@ class Setting extends ActiveRecord
             if( $result ) {
                 $settings[$key] = $result['value'];
                 Yii::$app->getSession()->set('settings', $settings);
+            } else {
+                // If setting not found, set null to avoid undefined array key error
+                $settings[$key] = null;
+                Yii::$app->getSession()->set('settings', $settings);
             }
 
         }
 
-        return $settings[$key];
+        return isset($settings[$key]) ? $settings[$key] : null;
 
     }
 
@@ -139,11 +143,11 @@ class Setting extends ActiveRecord
     {
 
         $settings = [];
-        $data     = self::find()->all();
+        $data     = self::find()->asArray()->all();
 
-        array_walk($data, function($v) use(&$settings) {
-            $settings[$v['key']] = $v['value'];
-        });
+        foreach ($data as $item) {
+            $settings[$item['key']] = $item['value'];
+        }
 
         return $settings;
 
@@ -164,9 +168,9 @@ class Setting extends ActiveRecord
             ->leftJoin('{{%setting_override}} o', 'o.`key`=s.`key` AND o.userid=:userid', [':userid' => Yii::$app->getUser()->id])
             ->all();
 
-        array_walk($data, function($v) use(&$settings) {
-            $settings[$v['key']] = $v['value'];
-        });
+        foreach ($data as $item) {
+            $settings[$item['key']] = $item['value'];
+        }
 
         return $settings;
 

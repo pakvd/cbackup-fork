@@ -32,11 +32,14 @@ $config = [
     'name'           => 'cBackup',
     'id'             => 'cBackup',
     'basePath'       => dirname(__DIR__),
+    'sourceLanguage' => 'en-US',
     'version'        => require_once('version.php'),
     'bootstrap'      => ['log', 'app\helpers\ConfigHelper'],
 	'aliases'        => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
+        '@webroot' => dirname(__DIR__) . '/web',
+        '@web' => '@webroot',
     ],
 
     'components' => [
@@ -92,16 +95,27 @@ $config = [
                 ],
                 [
                     'class'   => 'yii\log\FileTarget',
-                    'levels'  => ['error', 'warning'],
-                    'logVars' => ['_GET', '_POST'],
-                    'except'  => ['yii\base\ErrorException:8192'], // Suppress deprecated warnings
+                    'levels'  => ['error', 'warning', 'info'],
+                    'logVars' => ['_GET', '_POST', '_FILES', '_COOKIE'],
+                    'except'  => [], // Log all errors including deprecated warnings
                 ],
             ],
         ],
         'i18n' => [
             'translations' => [
                 '*' => [
-                    'class' => 'yii\i18n\PhpMessageSource'
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@app/messages',
+                    'sourceLanguage' => 'en-US',
+                    'fileMap' => [
+                        'app' => 'app.php',
+                        'user' => 'user.php',
+                        'network' => 'network.php',
+                        'log' => 'log.php',
+                        'mail' => 'mail.php',
+                        'config' => 'config.php',
+                        'rbac' => 'rbac.php',
+                    ],
                 ],
             ],
         ],
