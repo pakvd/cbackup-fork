@@ -1,17 +1,15 @@
 #!/bin/bash
-set -e
+# Don't use set -e here - we want to continue even if composer install fails
+# The app will show a proper error message if vendor is missing
 
 echo "=== Docker Entrypoint Script Starting ==="
 echo "Current directory: $(pwd)"
-echo "Checking /var/www/html contents..."
-ls -la /var/www/html/ | head -20
 
 # If vendor directory doesn't exist and composer.json exists, install dependencies
 if [ ! -d "/var/www/html/vendor" ]; then
     if [ -f "/var/www/html/composer.json" ]; then
         echo "=== Vendor directory not found. Installing Composer dependencies... ==="
         cd /var/www/html
-        echo "Current directory: $(pwd)"
         
         # Use full path to composer
         COMPOSER_CMD="/usr/bin/composer"
@@ -20,33 +18,22 @@ if [ ! -d "/var/www/html/vendor" ]; then
         fi
         
         echo "Composer location: $COMPOSER_CMD"
-        echo "Composer version: $($COMPOSER_CMD --version 2>&1 || echo 'composer not found')"
         
-        # Check composer.json exists
-        if [ ! -f "/var/www/html/composer.json" ]; then
-            echo "ERROR: composer.json not found!"
-            exit 1
-        fi
-        
+        # Install dependencies - don't fail if it errors, just log it
         echo "Installing dependencies..."
-        # Install dependencies with error handling
-        if ! $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>&1; then
-            echo "ERROR: Composer install failed!"
-            exit 1
-        fi
-        
-        # Verify installation
-        if [ -d "/var/www/html/vendor" ]; then
-            echo "=== Composer dependencies installed successfully ==="
-            echo "Vendor directory size: $(du -sh /var/www/html/vendor | cut -f1)"
+        if $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>&1; then
+            # Verify installation
+            if [ -d "/var/www/html/vendor" ]; then
+                echo "=== Composer dependencies installed successfully ==="
+            else
+                echo "=== WARNING: Composer completed but vendor directory not found ==="
+            fi
         else
-            echo "=== ERROR: Vendor directory still not found after installation ==="
-            exit 1
+            echo "=== WARNING: Composer install failed, but continuing... ==="
+            echo "The application may not work until dependencies are installed."
         fi
     else
         echo "=== WARNING: Vendor directory not found and composer.json is missing! ==="
-        echo "Files in /var/www/html:"
-        ls -la /var/www/html/ | head -10
     fi
 else
     echo "=== Vendor directory already exists ==="
@@ -64,6 +51,10 @@ chown -R www-data:www-data /var/www/html/web/assets
 chmod -R 775 /var/www/html/runtime
 chmod -R 775 /var/www/html/web/assets
 
-# Execute the original command
+# Always ensure we can start PHP-FPM
+echo "=== Starting PHP-FPM ==="
+echo "Command to execute: $@"
+
+# Execute the original command (should be php-fpm)
 exec "$@"
 
