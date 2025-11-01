@@ -1,5 +1,11 @@
 <?php
 
+// Load custom Schema class before using it
+$schemaClassFile = __DIR__ . '/../components/MysqlSchema.php';
+if (file_exists($schemaClassFile)) {
+    require_once $schemaClassFile;
+}
+
 // Read database configuration from environment variables (Docker) or use defaults
 $dbHost = getenv('DB_HOST') ?: 'db';
 $dbPort = getenv('DB_PORT') ?: '3306';
