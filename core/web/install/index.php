@@ -657,7 +657,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         // Add foreign key for log_node user
                         try {
                             $stmt = $pdo->query("SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = '{$dbName}' AND TABLE_NAME = 'log_node' AND CONSTRAINT_NAME = 'fk_log_node_user'");
-                            if ($stmt->rowCount() === 0) {
+                            if ($stmt && $stmt->rowCount() === 0) {
                                 $pdo->exec("ALTER TABLE `log_node` ADD CONSTRAINT `fk_log_node_user` FOREIGN KEY (`userid`) REFERENCES `user` (`userid`) ON DELETE SET NULL ON UPDATE CASCADE");
                             }
                         } catch (Exception $e) {
@@ -677,7 +677,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         // Add foreign key for log_mailer user
                         try {
                             $stmt = $pdo->query("SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = '{$dbName}' AND TABLE_NAME = 'log_mailer' AND CONSTRAINT_NAME = 'fk_log_mailer_user'");
-                            if ($stmt->rowCount() === 0) {
+                            if ($stmt && $stmt->rowCount() === 0) {
                                 $pdo->exec("ALTER TABLE `log_mailer` ADD CONSTRAINT `fk_log_mailer_user` FOREIGN KEY (`userid`) REFERENCES `user` (`userid`) ON DELETE SET NULL ON UPDATE CASCADE");
                             }
                         } catch (Exception $e) {
