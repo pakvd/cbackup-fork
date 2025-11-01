@@ -29,24 +29,58 @@ class MysqlSchema extends BaseSchema
      */
     public function loadTableSchema($name)
     {
+        // Override parent method to use safe foreign keys loading
+        // This prevents constraint_name errors in MySQL 8.0
         try {
-            $table = parent::loadTableSchema($name);
-            if ($table !== null) {
-                // Ensure foreign keys are loaded safely
-                try {
-                    $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
-                } catch (\Exception $e) {
-                    // If foreign keys loading fails, set empty array
-                    $table->foreignKeys = [];
-                }
+            // Load basic table info first
+            $table = $this->loadTableSchemaBasic($name);
+            if ($table === null) {
+                return null;
             }
+            
+            // Load foreign keys safely (skip if it fails)
+            try {
+                $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
+            } catch (\Exception $e) {
+                // If foreign keys loading fails, set empty array and continue
+                $table->foreignKeys = [];
+            }
+            
             return $table;
         } catch (\Exception $e) {
-            // If error contains constraint_name, try to work around it
+            // If error contains constraint_name, return null or empty table
+            if (strpos($e->getMessage(), 'constraint_name') !== false || 
+                strpos($e->getMessage(), 'Undefined array key') !== false ||
+                strpos($e->getMessage(), 'constraint_name') !== false) {
+                // Return empty schema or try basic load
+                try {
+                    return $this->loadTableSchemaBasic($name);
+                } catch (\Exception $e2) {
+                    return null;
+                }
+            }
+            throw $e;
+        }
+    }
+    
+    /**
+     * Load basic table schema without foreign keys
+     * 
+     * @param string $name table name
+     * @return TableSchema|null
+     */
+    protected function loadTableSchemaBasic($name)
+    {
+        // Call parent but catch any constraint_name errors
+        try {
+            return parent::loadTableSchema($name);
+        } catch (\Exception $e) {
+            // If error is about constraint_name, try to work around it
             if (strpos($e->getMessage(), 'constraint_name') !== false || 
                 strpos($e->getMessage(), 'Undefined array key') !== false) {
-                // Try loading without foreign keys first (cache will be cleared automatically if needed)
-                return $this->loadTableSchemaSafe($name);
+                // Try to create a basic table schema without foreign keys
+                // This is a fallback - return null if we can't load it
+                return null;
             }
             throw $e;
         }
@@ -70,6 +104,29 @@ class MysqlSchema extends BaseSchema
         } catch (\Exception $e) {
             // If still fails, return null
             return null;
+        }
+    }
+    
+    /**
+     * Loads constraints for the table.
+     * 
+     * Override to fix constraint_name issue with MySQL 8.0.
+     * The parent method may access constraint_name without checking if it exists.
+     * 
+     * @param TableSchema $table
+     * @return array
+     */
+    protected function loadTableConstraints($table, $type)
+    {
+        try {
+            return parent::loadTableConstraints($table, $type);
+        } catch (\Exception $e) {
+            // If error contains constraint_name, return empty array
+            if (strpos($e->getMessage(), 'constraint_name') !== false || 
+                strpos($e->getMessage(), 'Undefined array key') !== false) {
+                return [];
+            }
+            throw $e;
         }
     }
     

@@ -23,9 +23,7 @@ return [
 	'schemaMap' => [
 		'mysql' => 'app\components\MysqlSchema',
 	],
-	// Enable schema cache to avoid repeated information_schema queries
-	// This helps avoid issues with MySQL 8.0 information_schema queries
-	'enableSchemaCache' => !defined('YII_DEBUG') || !YII_DEBUG,
-	'schemaCache' => 'cache',
-	'schemaCacheDuration' => 86400, // 24 hours
+	// Disable schema cache temporarily to debug constraint_name issues
+	// This ensures our custom Schema class is always used
+	'enableSchemaCache' => false,
 ];
