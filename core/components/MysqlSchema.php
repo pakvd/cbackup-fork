@@ -45,20 +45,7 @@ class MysqlSchema extends BaseSchema
             // If error contains constraint_name, try to work around it
             if (strpos($e->getMessage(), 'constraint_name') !== false || 
                 strpos($e->getMessage(), 'Undefined array key') !== false) {
-                // Clear cache and try again
-                if ($this->db->enableSchemaCache && $this->db->schemaCache) {
-                    try {
-                        $cache = is_string($this->db->schemaCache) 
-                            ? \Yii::$app->get($this->db->schemaCache) 
-                            : $this->db->schemaCache;
-                        if ($cache instanceof \yii\caching\CacheInterface) {
-                            $cache->delete($this->getCacheKey($name));
-                        }
-                    } catch (\Exception $cacheEx) {
-                        // Ignore cache errors
-                    }
-                }
-                // Try loading without foreign keys first
+                // Try loading without foreign keys first (cache will be cleared automatically if needed)
                 return $this->loadTableSchemaSafe($name);
             }
             throw $e;
