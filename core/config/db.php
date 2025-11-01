@@ -13,6 +13,10 @@ return [
 	'username' => $dbUser,
 	'password' => $dbPassword,
 	'charset' => 'utf8mb4',
+	// Use custom Schema class to fix MySQL 8.0 constraint_name issues
+	'schemaMap' => [
+		'mysql' => 'app\components\MysqlSchema',
+	],
 	// Enable schema cache to avoid repeated information_schema queries
 	// This helps avoid issues with MySQL 8.0 information_schema queries
 	'enableSchemaCache' => !defined('YII_DEBUG') || !YII_DEBUG,
