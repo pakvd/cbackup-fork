@@ -57,6 +57,10 @@ RUN chown -R www-data:www-data /var/www/html \
 # This is used by older Yii2 versions and doesn't affect functionality in PHP 8.0+
 RUN echo "error_reporting = E_ALL & ~E_DEPRECATED" > /usr/local/etc/php/conf.d/deprecated.ini
 
+# Disable opcache for development to ensure code changes are applied immediately
+# In production, you can enable opcache but should restart PHP-FPM after code changes
+RUN echo "opcache.enable=0" > /usr/local/etc/php/conf.d/opcache.ini || true
+
 # Set Docker environment variable for application detection
 ENV DOCKER_CONTAINER=true
 ENV container=docker
