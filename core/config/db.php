@@ -14,19 +14,8 @@ return [
 	'password' => $dbPassword,
 	'charset' => 'utf8mb4',
 	// Enable schema cache to avoid repeated information_schema queries
+	// This helps avoid issues with MySQL 8.0 information_schema queries
 	'enableSchemaCache' => !defined('YII_DEBUG') || !YII_DEBUG,
 	'schemaCache' => 'cache',
 	'schemaCacheDuration' => 86400, // 24 hours
-	// Additional MySQL 8.0 compatibility
-	'schemaMap' => [
-		'mysql' => [
-			'class' => 'yii\db\mysql\Schema',
-			// Fix for MySQL 8.0 information_schema queries
-			'defaultTableOptions' => [
-				'engine' => 'InnoDB',
-				'charset' => 'utf8mb4',
-				'collate' => 'utf8mb4_unicode_ci',
-			],
-		],
-	],
 ];
