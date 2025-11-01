@@ -32,7 +32,7 @@ import com.google.gson.reflect.TypeToken;
 /*
  * md5
  */
-import javax.xml.bind.DatatypeConverter;
+import java.util.Base64;
 import java.lang.reflect.Type;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -335,7 +335,16 @@ public abstract class AbstractWorker extends AbstractCoreUnit implements Callabl
                 MessageDigest md = MessageDigest.getInstance("MD5");
                 md.update(allData.getBytes()); // todo test getBytes("UTF-8")
                 byte[] digest = md.digest();
-                newHash = DatatypeConverter.printHexBinary(digest).toUpperCase();
+                // Convert byte array to hex string (Java 8+ compatible)
+                StringBuilder hexString = new StringBuilder();
+                for (byte b : digest) {
+                    String hex = Integer.toHexString(0xff & b);
+                    if (hex.length() == 1) {
+                        hexString.append('0');
+                    }
+                    hexString.append(hex);
+                }
+                newHash = hexString.toString().toUpperCase();
 
             } catch (NoSuchAlgorithmException e) {
                 String parseCredMessage = "Task " + this.coordinates.get("taskName") + ", node " + this.coordinates.get("nodeId") + ": can't get new md5 hash from result.";

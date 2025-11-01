@@ -621,7 +621,12 @@ public class GeneralSnmp extends AbstractProtocol {
                 return false;
             }
 
-            Vector tempVector = responsePDU.getVariableBindings();
+            // Convert List to Vector for compatibility
+            java.util.List<? extends org.snmp4j.smi.VariableBinding> varBindingsList = responsePDU.getVariableBindings();
+            Vector tempVector = new Vector();
+            if (varBindingsList != null) {
+                tempVector.addAll(varBindingsList);
+            }
 
             // Checking errors
             Integer errorStatus    = responsePDU.getErrorStatus();

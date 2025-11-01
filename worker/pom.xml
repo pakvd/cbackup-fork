@@ -16,6 +16,12 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
+    <properties>
+        <java.version>11</java.version>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+    </properties>
+
     <build>
         <!-- Maven plugins -->
         <plugins>
@@ -66,6 +72,17 @@
             <artifactId>expectit-core</artifactId>
             <version>0.8.2</version>
         </dependency>
+        <!-- Expect4j for SSH/Telnet -->
+        <!-- NOTE: expect4j is not available in Maven repositories -->
+        <!-- TODO: Migrate SSH/Telnet code to use expectit-core instead -->
+        <!-- SSH/Telnet functionality temporarily disabled until migration is complete -->
+        <!--
+        <dependency>
+            <groupId>com.googlecode.expect4j</groupId>
+            <artifactId>expect4j</artifactId>
+            <version>1.9</version>
+        </dependency>
+        -->
         <!-- SNMP -->
         <!-- https://mvnrepository.com/artifact/org.snmp4j/snmp4j-agent -->
         <dependency>
@@ -91,6 +108,28 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <!-- JSch SSH library -->
+        <!-- https://mvnrepository.com/artifact/com.jcraft/jsch -->
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.55</version>
+        </dependency>
+        <!-- javax.xml.bind for Java 11+ compatibility -->
+        <!-- https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+        <!-- JAXB implementation for Java 11+ -->
+        <!-- https://mvnrepository.com/artifact/org.glassfish.jaxb/jaxb-runtime -->
+        <!-- Note: Version 2.3.11 does not exist in Maven Central, using 2.3.5 instead -->
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>2.3.5</version>
         </dependency>
         <!-- Spring shell service -->
         <!-- NOTE: Temporarily disabled - library not available in Maven repositories -->
@@ -166,6 +205,17 @@
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
+        </repository>
+        <!-- Sonatype OSS for expect4j and other libraries -->
+        <repository>
+            <id>sonatype-oss-public</id>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
 
