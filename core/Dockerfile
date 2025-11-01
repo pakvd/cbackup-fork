@@ -27,14 +27,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files first for better caching
-COPY composer.json composer.lock* ./
-
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts || true
-
-# Copy application files
+# Copy all application files first
 COPY . /var/www/html
+
+# Install PHP dependencies (will create vendor directory)
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts || true
 
 # Create necessary directories
 RUN mkdir -p /var/www/html/runtime \
