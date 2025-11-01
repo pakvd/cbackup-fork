@@ -19,18 +19,58 @@ if [ ! -d "/var/www/html/vendor" ]; then
         
         echo "Composer location: $COMPOSER_CMD"
         
-        # Install dependencies - don't fail if it errors, just log it
-        echo "Installing dependencies..."
-        if $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>&1; then
-            # Verify installation
-            if [ -d "/var/www/html/vendor" ]; then
-                echo "=== Composer dependencies installed successfully ==="
-            else
-                echo "=== WARNING: Composer completed but vendor directory not found ==="
-            fi
+        # Check if composer is executable
+        if [ ! -x "$COMPOSER_CMD" ]; then
+            echo "ERROR: Composer is not executable at $COMPOSER_CMD"
+            # Try to find composer in PATH
+            COMPOSER_CMD=$(which composer 2>/dev/null || echo "composer")
+            echo "Trying composer from PATH: $COMPOSER_CMD"
+        fi
+        
+        # Test composer
+        if ! $COMPOSER_CMD --version 2>&1; then
+            echo "ERROR: Composer is not working. Cannot install dependencies."
         else
-            echo "=== WARNING: Composer install failed, but continuing... ==="
-            echo "The application may not work until dependencies are installed."
+            echo "Composer version check passed"
+            
+            # Check composer.json
+            if [ -f "/var/www/html/composer.json" ]; then
+                echo "composer.json found"
+            else
+                echo "ERROR: composer.json not found at /var/www/html/composer.json"
+            fi
+            
+            # Check if composer.lock exists
+            if [ -f "/var/www/html/composer.lock" ]; then
+                echo "composer.lock found - using locked versions"
+            else
+                echo "WARNING: composer.lock not found - will resolve dependencies"
+            fi
+            
+            # Install dependencies - capture output and error
+            echo "Installing dependencies..."
+            echo "Running: $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts"
+            
+            # Capture both stdout and stderr
+            if OUTPUT=$($COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>&1); then
+                echo "Composer command completed with exit code 0"
+                echo "$OUTPUT" | tail -20
+                
+                # Verify installation
+                if [ -d "/var/www/html/vendor" ]; then
+                    echo "=== Composer dependencies installed successfully ==="
+                    echo "Vendor directory size: $(du -sh /var/www/html/vendor 2>/dev/null | cut -f1 || echo 'unknown')"
+                else
+                    echo "=== WARNING: Composer completed but vendor directory not found ==="
+                fi
+            else
+                EXIT_CODE=$?
+                echo "=== ERROR: Composer install failed with exit code $EXIT_CODE ==="
+                echo "Composer output:"
+                echo "$OUTPUT"
+                echo "=== End of Composer error output ==="
+                echo "The application may not work until dependencies are installed."
+            fi
         fi
     else
         echo "=== WARNING: Vendor directory not found and composer.json is missing! ==="
