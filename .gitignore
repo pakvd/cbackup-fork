@@ -11,6 +11,11 @@ web/assets/
 *~
 .DS_Store
 
+# IntelliJ IDEA
+*.iml
+*.ipr
+*.iws
+
 # Избегаем вложенных git репозиториев
 core/modules/cds/content/.git
 core/data/backup/.git
