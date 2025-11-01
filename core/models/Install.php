@@ -502,9 +502,17 @@ class Install extends Model
                 'x' => false,
             ];
 
-            if($locations[$i]['lockedonly']===true && !file_exists(Yii::$app->basePath.DIRECTORY_SEPARATOR.'install.lock')) {
-                $locations[$i]['path'] = null;
-                continue;
+            // Check for install.lock in multiple locations (due to volume mount permission issues)
+            if($locations[$i]['lockedonly']===true) {
+                $basePath = Yii::$app->basePath;
+                $installLockPath = $basePath . DIRECTORY_SEPARATOR . 'install.lock';
+                $runtimeLockPath = $basePath . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'install.lock';
+                $isInstalled = file_exists($installLockPath) || file_exists($runtimeLockPath);
+                
+                if (!$isInstalled) {
+                    $locations[$i]['path'] = null;
+                    continue;
+                }
             }
 
             if( !file_exists($locations[$i]['path']) ) {

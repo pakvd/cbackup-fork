@@ -8,8 +8,10 @@
 $configPath = __DIR__ . '/../../config/web.php';
 $basePath = dirname(dirname(__DIR__));
 
-// Check if already installed
-if (file_exists($basePath . '/install.lock')) {
+// Check if already installed - check multiple locations
+$installLockPath = $basePath . '/install.lock';
+$runtimeLockPath = $basePath . '/runtime/install.lock';
+if (file_exists($installLockPath) || file_exists($runtimeLockPath)) {
     header("Location: /");
     exit();
 }
@@ -772,10 +774,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $step = 3;
             }
         } elseif ($action === 'finalize') {
-            // Create install.lock
-            file_put_contents($basePath . '/install.lock', date('Y-m-d H:i:s'));
-            header("Location: /");
-            exit();
+            // Create install.lock - try multiple locations due to volume mount permission issues
+            $installLockPath = $basePath . '/install.lock';
+            $runtimeLockPath = $basePath . '/runtime/install.lock';
+            
+            // Try to create in base path first
+            $success = false;
+            if (is_writable($basePath) || is_writable(dirname($installLockPath))) {
+                if (@file_put_contents($installLockPath, date('Y-m-d H:i:s'))) {
+                    $success = true;
+                }
+            }
+            
+            // If failed, try runtime directory (which has proper permissions)
+            if (!$success) {
+                $runtimeDir = $basePath . '/runtime';
+                if (!is_dir($runtimeDir)) {
+                    @mkdir($runtimeDir, 0775, true);
+                }
+                if (@file_put_contents($runtimeLockPath, date('Y-m-d H:i:s'))) {
+                    // Create symlink in base path if possible, or create .install-lock-location file
+                    @file_put_contents($basePath . '/runtime/.install-lock-location', 'runtime');
+                    $success = true;
+                }
+            }
+            
+            if (!$success) {
+                $errors[] = 'Failed to create install.lock file. Please check file permissions.';
+            } else {
+                header("Location: /");
+                exit();
+            }
         }
     } catch (Exception $e) {
         $errors[] = 'Database error: ' . htmlspecialchars($e->getMessage());

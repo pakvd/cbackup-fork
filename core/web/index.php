@@ -75,7 +75,14 @@ require(__DIR__ . '/../helpers/Y.php'); // Load Y helper class
 
 $config = require(__DIR__ . '/../config/web.php');
 
-if( !file_exists($config['basePath'].DIRECTORY_SEPARATOR.'install.lock') ) {
+// Check for install.lock in multiple locations (due to volume mount permission issues)
+$basePath = $config['basePath'];
+$installLockPath = $basePath . DIRECTORY_SEPARATOR . 'install.lock';
+$runtimeLockPath = $basePath . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'install.lock';
+
+$isInstalled = file_exists($installLockPath) || file_exists($runtimeLockPath);
+
+if (!$isInstalled) {
     header("Location: ./install/index.php");
     exit();
 }
