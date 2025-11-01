@@ -91,9 +91,8 @@ public class FactoryMethodSnmp {
         else {
 
             try {
-                Class currentSnmpClass      = Class.forName("snmp."+className);
-                //noinspection unchecked
-                Constructor snmpConstructor = currentSnmpClass.getConstructor(Map.class, Map.class, Map.class, Map.class, Map.class);
+                Class<? extends GeneralSnmp> currentSnmpClass = Class.forName("snmp."+className).asSubclass(GeneralSnmp.class);
+                Constructor<? extends GeneralSnmp> snmpConstructor = currentSnmpClass.getConstructor(Map.class, Map.class, Map.class, Map.class, Map.class);
                 Object snmpObject           = snmpConstructor.newInstance(coordinates, settings, credentials, jobs, variables );
                 toReturn                    = (GeneralSnmp)snmpObject;
             }

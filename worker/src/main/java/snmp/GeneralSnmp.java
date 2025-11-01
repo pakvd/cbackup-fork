@@ -55,7 +55,7 @@ public class GeneralSnmp extends AbstractProtocol {
      * SNMP objects
      */
     private Snmp snmp;
-    private CommunityTarget target;
+    private CommunityTarget<Address> target;
     private PDU requestPDU;
 
 
@@ -296,7 +296,7 @@ public class GeneralSnmp extends AbstractProtocol {
 
             Address address = new UdpAddress(this.coordinates.get("nodeIp") + "/" + this.snmpPort.toString());
 
-            this.target = new CommunityTarget();
+            this.target = new CommunityTarget<Address>();
             this.target.setAddress(address);
             this.target.setTimeout(this.snmpTimeout);
             this.target.setRetries(this.snmpRetries);
@@ -585,7 +585,7 @@ public class GeneralSnmp extends AbstractProtocol {
             }
 
             PDU responsePDU;
-            ResponseEvent responseEvent;
+            ResponseEvent<Address> responseEvent;
 
             /*
              * Sending request
@@ -623,7 +623,7 @@ public class GeneralSnmp extends AbstractProtocol {
 
             // Convert List to Vector for compatibility
             java.util.List<? extends org.snmp4j.smi.VariableBinding> varBindingsList = responsePDU.getVariableBindings();
-            Vector tempVector = new Vector();
+            Vector<VariableBinding> tempVector = new Vector<>();
             if (varBindingsList != null) {
                 tempVector.addAll(varBindingsList);
             }
@@ -639,7 +639,7 @@ public class GeneralSnmp extends AbstractProtocol {
                 return false;
             }
 
-            if (tempVector == null) {
+            if (tempVector.isEmpty()) {
                 String responsePduVectorMessage = "Task " + this.coordinates.get("taskName") + ", node " + this.coordinates.get("nodeId") +
                         ": empty response PDU vector. Node offline or wrong community.";
                 this.logMessage("ERROR", "NODE REQUEST", responsePduVectorMessage);

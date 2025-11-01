@@ -32,7 +32,6 @@ import com.google.gson.reflect.TypeToken;
 /*
  * md5
  */
-import java.util.Base64;
 import java.lang.reflect.Type;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -317,15 +316,15 @@ public abstract class AbstractWorker extends AbstractCoreUnit implements Callabl
 
             // Calculating new hash
             // Get a set of the entries
-            Set resultDataSet = this.workerResult.data.entrySet();
+            Set<Map.Entry<String, String>> resultDataSet = this.workerResult.data.entrySet();
 
             // Get an iterator
-            Iterator it = resultDataSet.iterator();
+            Iterator<Map.Entry<String, String>> it = resultDataSet.iterator();
 
             // Concatenating all new data
             // noinspection WhileLoopReplaceableByForEach
             while (it.hasNext()) {
-                Map.Entry result = (Map.Entry) it.next();
+                Map.Entry<String, String> result = it.next();
                 allData += result.getValue();
             }
 

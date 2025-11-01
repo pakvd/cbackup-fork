@@ -617,49 +617,46 @@ public class Scheduler extends AbstractCoreUnit {
                 return response;
             }
 
-            // TODO: rework. we don't need loop here
-            for(Map<String, String> currentTask : task) {
+            /*
+             * Task data validation
+             */
+            Map<String, String> currentTask = task.get(0);
 
-                String curTaskName = currentTask.get("taskName");
-                String curTaskType = currentTask.get("taskType");
-                String curPut      = currentTask.get("put");
-                String curTable    = currentTask.get("table");
+            String curTaskName = currentTask.get("taskName");
+            String curTaskType = currentTask.get("taskType");
+            String curPut      = currentTask.get("put");
+            String curTable    = currentTask.get("table");
 
-                /*
-                 * Task data validation
-                 */
-                if(curTaskName == null || curTaskName.length() == 0) {
-                    this.logSystemMessage("ERROR", "SCHEDULER RUN TASK", "Can't add task. Task name is empty.");
-                    response.message   = "Task has not been started: task name is empty";
-                    return response;
-                }
-                if(curTaskType == null || curTaskType.length() == 0) {
-                    this.logSystemMessage("ERROR", "SCHEDULER RUN TASK", "Can't add task. Task type is empty.");
-                    response.message   = "Task has not been started: task type is empty";
-                    return response;
-                }
-                if((curPut != null && curPut.equals("db")) && (curTable ==null || curTable.length() == 0)) {
-                    this.logSystemMessage("ERROR", "SCHEDULER RUN TASK", "Can't add task. Task db table is empty.");
-                    response.message   = "Task has not been started: db table is empty";
-                    return response;
-                }
+            if(curTaskName == null || curTaskName.length() == 0) {
+                this.logSystemMessage("ERROR", "SCHEDULER RUN TASK", "Can't add task. Task name is empty.");
+                response.message   = "Task has not been started: task name is empty";
+                return response;
+            }
+            if(curTaskType == null || curTaskType.length() == 0) {
+                this.logSystemMessage("ERROR", "SCHEDULER RUN TASK", "Can't add task. Task type is empty.");
+                response.message   = "Task has not been started: task type is empty";
+                return response;
+            }
+            if((curPut != null && curPut.equals("db")) && (curTable ==null || curTable.length() == 0)) {
+                this.logSystemMessage("ERROR", "SCHEDULER RUN TASK", "Can't add task. Task db table is empty.");
+                response.message   = "Task has not been started: db table is empty";
+                return response;
+            }
 
-                Map<String, String> currentCoordinates = new HashMap<>();
-                currentCoordinates.putAll(currentTask);
-                currentCoordinates.putAll(this.coordinates);
+            Map<String, String> currentCoordinates = new HashMap<>();
+            currentCoordinates.putAll(currentTask);
+            currentCoordinates.putAll(this.coordinates);
 
-                CronTask taskObject = new CronTask(this.settings, currentCoordinates);
+            CronTask taskObject = new CronTask(this.settings, currentCoordinates);
 
-                try {
-                    CronSingleton.getInstance().getScheduler().launch(taskObject);
-                }
-                catch (Exception e) {
-                    this.logSystemMessage("ERROR", "SCHEDULER RUN TASK", "Can't add task. " + e.getMessage());
-                    response.message   = "Task has not been started: exception upon task launch.";
-                    response.exception = e.getMessage();
-                    return response;
-                }
-
+            try {
+                CronSingleton.getInstance().getScheduler().launch(taskObject);
+            }
+            catch (Exception e) {
+                this.logSystemMessage("ERROR", "SCHEDULER RUN TASK", "Can't add task. " + e.getMessage());
+                response.message   = "Task has not been started: exception upon task launch.";
+                response.exception = e.getMessage();
+                return response;
             }
 
             response.message = "Task " + taskName +" started";
@@ -712,8 +709,6 @@ public class Scheduler extends AbstractCoreUnit {
         /*
          * Getting API address and token
          */
-        Properties config = new Properties();
-
         try {
 
             this.coordinates.put("scheme", this.scheme);

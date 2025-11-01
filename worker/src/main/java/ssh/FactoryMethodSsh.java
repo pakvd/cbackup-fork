@@ -92,9 +92,8 @@ public class FactoryMethodSsh {
         else {
 
             try {
-                Class currentSshClass         = Class.forName("ssh."+className);
-                //noinspection unchecked
-                Constructor sshConstructor    = currentSshClass.getConstructor(Map.class, Map.class, Map.class, Map.class, Map.class);
+                Class<? extends GeneralSsh> currentSshClass = Class.forName("ssh."+className).asSubclass(GeneralSsh.class);
+                Constructor<? extends GeneralSsh> sshConstructor = currentSshClass.getConstructor(Map.class, Map.class, Map.class, Map.class, Map.class);
                 Object sshObject              = sshConstructor.newInstance(coordinates, settings, credentials, jobs, variables );
                 toReturn                      = (GeneralSsh)sshObject;
             }

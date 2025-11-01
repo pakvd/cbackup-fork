@@ -92,11 +92,10 @@ public class FactoryMethodTelnet {
         else {
 
             try {
-                Class currentTelnetClass      = Class.forName("telnet."+className);
+                Class<? extends GeneralTelnet> currentTelnetClass = Class.forName("telnet."+className).asSubclass(GeneralTelnet.class);
                 //noinspection unchecked
-                Constructor telnetConstructor = currentTelnetClass.getConstructor(Map.class, Map.class, Map.class, Map.class, Map.class);
-                Object telnetObject           = telnetConstructor.newInstance(coordinates, settings, credentials, jobs, variables );
-                toReturn                      = (GeneralTelnet)telnetObject;
+                Constructor<? extends GeneralTelnet> telnetConstructor = currentTelnetClass.getConstructor(Map.class, Map.class, Map.class, Map.class, Map.class);
+                toReturn = telnetConstructor.newInstance(coordinates, settings, credentials, jobs, variables);
             }
             catch(Exception e) {
                 String portParseMessage = "Task " + coordinates.get("taskName") + ", node " + coordinates.get("nodeId") +

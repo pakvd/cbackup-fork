@@ -70,7 +70,7 @@ public class WorkerDiscovery extends AbstractCoreUnit implements Callable<Boolea
      * SNMP objects
      */
     private Snmp snmp;
-    private CommunityTarget target;
+    private CommunityTarget<Address> target;
     private PDU requestPDU;
 
     private static final Map<String, String> discoveryOids = createMap();
@@ -243,7 +243,7 @@ public class WorkerDiscovery extends AbstractCoreUnit implements Callable<Boolea
 
             Address address = new UdpAddress(this.coordinates.get("nodeIp") + "/" + this.snmpPort.toString());
 
-            this.target = new CommunityTarget();
+            this.target = new CommunityTarget<>();
             this.target.setAddress(address);
             this.target.setTimeout(this.snmpTimeout);
             this.target.setRetries(this.snmpRetries);
@@ -459,7 +459,7 @@ public class WorkerDiscovery extends AbstractCoreUnit implements Callable<Boolea
     {
 
         PDU responsePDU;
-        ResponseEvent responseEvent;
+        ResponseEvent<?> responseEvent;
 
         /*
          * Sending request
@@ -492,7 +492,7 @@ public class WorkerDiscovery extends AbstractCoreUnit implements Callable<Boolea
 
         // Convert List to Vector for compatibility
         java.util.List<? extends org.snmp4j.smi.VariableBinding> varBindingsList = responsePDU.getVariableBindings();
-        Vector tempVector = new Vector();
+        Vector<VariableBinding> tempVector = new Vector<>();
         if (varBindingsList != null) {
             tempVector.addAll(varBindingsList);
         }
@@ -513,15 +513,10 @@ public class WorkerDiscovery extends AbstractCoreUnit implements Callable<Boolea
             return false;
         }
 
-        // Empty response PDU Vector. Node offline or wrong community.
-        if (tempVector == null) {
-            return false;
-        }
-
         // Foreach SNMP response if !exception add response to result
         // noinspection ForLoopReplaceableByForEach
         for(int i = 0; i < tempVector.size(); i++) {
-            VariableBinding vb = (VariableBinding)tempVector.get(i);
+            VariableBinding vb = tempVector.get(i);
 
             if (!vb.isException()) {
                 /*
