@@ -113,11 +113,26 @@ mkdir -p /var/www/html/runtime/sessions
 mkdir -p /var/www/html/web/assets
 mkdir -p /var/www/html/logger
 
-# Set proper permissions
-chown -R www-data:www-data /var/www/html/runtime
-chown -R www-data:www-data /var/www/html/web/assets
+# Set proper permissions for directories and files
+# Note: For volume mounts, we can't change ownership, so we set permissions for group write
 chmod -R 775 /var/www/html/runtime
 chmod -R 775 /var/www/html/web/assets
+chmod -R 775 /var/www/html/logger
+chmod 775 /var/www/html || true  # Allow write to root directory for install.lock
+
+# Try to change ownership if possible (may fail with volume mounts, but try anyway)
+chown -R www-data:www-data /var/www/html/runtime 2>/dev/null || true
+chown -R www-data:www-data /var/www/html/web/assets 2>/dev/null || true
+chown -R www-data:www-data /var/www/html/logger 2>/dev/null || true
+
+# Ensure install.lock can be created (if directory is writable)
+if [ -w "/var/www/html" ]; then
+    echo "=== /var/www/html is writable ==="
+else
+    echo "=== WARNING: /var/www/html is not writable, install.lock creation may fail ==="
+    # Try to make it writable
+    chmod 775 /var/www/html 2>/dev/null || true
+fi
 
 # Always ensure we can start PHP-FPM
 echo "=== Starting PHP-FPM ==="
