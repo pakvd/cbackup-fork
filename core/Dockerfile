@@ -30,7 +30,12 @@ WORKDIR /var/www/html
 # Copy all application files first
 COPY . /var/www/html
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Install PHP dependencies (will create vendor directory)
+# This will be in the image, but may be overridden by volume mount
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts || true
 
 # Create necessary directories
@@ -58,6 +63,9 @@ ENV container=docker
 
 # Expose port
 EXPOSE 9000
+
+# Use entrypoint to ensure dependencies are installed
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 CMD ["php-fpm"]
 
