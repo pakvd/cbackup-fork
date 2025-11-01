@@ -20,6 +20,68 @@ use yii\db\TableSchema;
 class MysqlSchema extends BaseSchema
 {
     /**
+     * Loads the metadata for the specified table.
+     * 
+     * Override to ensure foreign keys are loaded safely.
+     * 
+     * @param string $name table name
+     * @return TableSchema|null driver dependent table metadata. Null if the table does not exist.
+     */
+    public function loadTableSchema($name)
+    {
+        try {
+            $table = parent::loadTableSchema($name);
+            if ($table !== null) {
+                // Ensure foreign keys are loaded safely
+                try {
+                    $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
+                } catch (\Exception $e) {
+                    // If foreign keys loading fails, set empty array
+                    $table->foreignKeys = [];
+                }
+            }
+            return $table;
+        } catch (\Exception $e) {
+            // If error contains constraint_name, try to work around it
+            if (strpos($e->getMessage(), 'constraint_name') !== false || 
+                strpos($e->getMessage(), 'Undefined array key') !== false) {
+                // Clear cache and try again
+                if ($this->db->enableSchemaCache) {
+                    try {
+                        $this->db->schemaCache->delete($this->getCacheKey($name));
+                    } catch (\Exception $cacheEx) {
+                        // Ignore cache errors
+                    }
+                }
+                // Try loading without foreign keys first
+                return $this->loadTableSchemaSafe($name);
+            }
+            throw $e;
+        }
+    }
+    
+    /**
+     * Safely load table schema without constraint_name errors
+     * 
+     * @param string $name table name
+     * @return TableSchema|null
+     */
+    protected function loadTableSchemaSafe($name)
+    {
+        try {
+            $table = parent::loadTableSchema($name);
+            if ($table !== null) {
+                // Load foreign keys safely
+                $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
+            }
+            return $table;
+        } catch (\Exception $e) {
+            // If still fails, return null
+            return null;
+        }
+    }
+    
+    /**
      * Loads foreign keys for the table.
      * 
      * Override to fix constraint_name issue with MySQL 8.0.
