@@ -49,10 +49,12 @@ if [ ! -d "/var/www/html/vendor" ]; then
             
             # Install dependencies - capture output and error
             echo "Installing dependencies..."
-            echo "Running: $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts"
+            echo "Running: $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
             
             # Capture both stdout and stderr
-            if OUTPUT=$($COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>&1); then
+            # Use --ignore-platform-reqs to ignore missing ext-mcrypt (deprecated in PHP 7.2+)
+            # Use --no-scripts to avoid running scripts that might fail
+            if OUTPUT=$($COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1); then
                 echo "Composer command completed with exit code 0"
                 echo "$OUTPUT" | tail -20
                 
@@ -69,7 +71,33 @@ if [ ! -d "/var/www/html/vendor" ]; then
                 echo "Composer output:"
                 echo "$OUTPUT"
                 echo "=== End of Composer error output ==="
-                echo "The application may not work until dependencies are installed."
+                
+                # Try composer update if install failed due to lock file issues
+                if echo "$OUTPUT" | grep -q "composer update" || echo "$OUTPUT" | grep -q "compatible set of packages"; then
+                    echo "=== Trying composer update to fix lock file issues ==="
+                    echo "Running: $COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
+                    
+                    if UPDATE_OUTPUT=$($COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1); then
+                        echo "Composer update completed successfully"
+                        echo "$UPDATE_OUTPUT" | tail -30
+                        
+                        # Verify installation
+                        if [ -d "/var/www/html/vendor" ]; then
+                            echo "=== Composer dependencies installed successfully after update ==="
+                            echo "Vendor directory size: $(du -sh /var/www/html/vendor 2>/dev/null | cut -f1 || echo 'unknown')"
+                        else
+                            echo "=== WARNING: Composer update completed but vendor directory not found ==="
+                        fi
+                    else
+                        echo "=== ERROR: Composer update also failed ==="
+                        echo "Update output:"
+                        echo "$UPDATE_OUTPUT"
+                        echo "=== End of Composer update error output ==="
+                        echo "The application may not work until dependencies are installed."
+                    fi
+                else
+                    echo "The application may not work until dependencies are installed."
+                fi
             fi
         fi
     else
