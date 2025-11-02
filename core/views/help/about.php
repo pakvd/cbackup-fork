@@ -43,22 +43,15 @@ try {
     // Ignore errors setting breadcrumbs/title - they're not critical
 }
 
-// Log template execution start
-if (function_exists('error_log')) {
-    error_log("=== about.php template START ===");
-}
+// Log template execution start - using direct file write to avoid any Yii2 operations
+@file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " === about.php template START ===\n", FILE_APPEND | LOCK_EX);
+error_log("=== about.php template START ===");
 
-// CRITICAL: Disable any potential DB operations during template rendering
-// Try to access Yii::$app safely and disable schema cache if possible
-try {
-    if (isset(Yii::$app) && isset(Yii::$app->db)) {
-        Yii::$app->db->enableSchemaCache = false;
-        error_log("=== about.php: Schema cache disabled ===");
-    }
-} catch (\Throwable $e) {
-    error_log("=== about.php: Could not disable schema cache: " . $e->getMessage());
-}
+// CRITICAL: DO NOT access Yii::$app here - it may trigger DB queries
+// Schema cache is already disabled in controller
+// Just proceed to HTML output immediately
 
+@file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before HTML start\n", FILE_APPEND | LOCK_EX);
 error_log("=== about.php: Before HTML start ===");
 ?>
 <div class="row">
@@ -67,9 +60,18 @@ error_log("=== about.php: Before HTML start ===");
             <ul class="nav nav-tabs">
                 <li class="active">
                     <a href="#tab_1" data-toggle="tab"><?php 
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before first Yii::t() call\n", FILE_APPEND | LOCK_EX);
                         error_log("=== about.php: Before Yii::t('app', 'System') ===");
-                        echo htmlspecialchars(Yii::t('app', 'System')); 
+                        try {
+                            $systemText = Yii::t('app', 'System');
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Yii::t('app', 'System') returned: " . substr($systemText, 0, 20) . "\n", FILE_APPEND | LOCK_EX);
+                            echo htmlspecialchars($systemText); 
+                        } catch (\Throwable $e) {
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Yii::t() ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
+                            echo 'System'; // Fallback
+                        }
                         error_log("=== about.php: After Yii::t('app', 'System') ===");
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After first Yii::t() call\n", FILE_APPEND | LOCK_EX);
                     ?></a>
                 </li>
                 <li>
