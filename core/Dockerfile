@@ -55,9 +55,12 @@ RUN chown -R www-data:www-data /var/www/html \
     && if [ -f /var/www/html/yii.bat ]; then chmod 444 /var/www/html/yii.bat; fi \
     && if [ -f /var/www/html/yii ]; then chmod 644 /var/www/html/yii; chmod -x /var/www/html/yii; fi
 
-# Configure PHP to suppress deprecated warnings for ReflectionParameter::getClass()
+# Configure PHP for production: suppress errors and deprecated warnings
 # This is used by older Yii2 versions and doesn't affect functionality in PHP 8.0+
-RUN echo "error_reporting = E_ALL & ~E_DEPRECATED" > /usr/local/etc/php/conf.d/deprecated.ini
+RUN echo "error_reporting = E_ALL & ~E_DEPRECATED" > /usr/local/etc/php/conf.d/deprecated.ini && \
+    echo "display_errors = Off" >> /usr/local/etc/php/conf.d/deprecated.ini && \
+    echo "display_startup_errors = Off" >> /usr/local/etc/php/conf.d/deprecated.ini && \
+    echo "log_errors = On" >> /usr/local/etc/php/conf.d/deprecated.ini
 
 # Configure opcache - enable by default for production
 # Set ENABLE_OPCACHE=false in docker-compose.yml to disable for development

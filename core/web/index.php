@@ -39,24 +39,27 @@ if (is_writable($sessionPath) || is_writable(dirname($sessionPath))) {
 defined('YII_DEBUG') or define('YII_DEBUG', getenv('YII_DEBUG') === 'true' ? true : false);
 defined('YII_ENV') or define('YII_ENV', getenv('YII_ENV') ?: 'prod');
 
-// Suppress deprecated warnings for ReflectionParameter::getClass() in PHP 8.0+
-// This is used by older Yii2 versions and doesn't affect functionality
-// Set before loading Yii to ensure it applies globally
+// Production settings: disable error display, suppress deprecated warnings
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
 
 // Register custom error handler to suppress deprecated warnings
-// Note: Fatal errors like "Array and string offset access syntax with curly braces" 
-// cannot be caught by set_error_handler, they are handled by register_shutdown_function
+// In production, only log errors, never display them
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     // Suppress deprecated warnings (E_DEPRECATED = 8192)
     if ($errno === E_DEPRECATED) {
         return true; // Suppress the warning
     }
-    // Log all other errors to help debug
-    error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
-    // Let other errors pass through
-    return false;
-}, E_DEPRECATED);
+    // In production mode, log errors but don't display them
+    if (!YII_DEBUG) {
+        $logFile = __DIR__ . '/../runtime/logs/app.log';
+        $logMessage = date('Y-m-d H:i:s') . " [ERROR] PHP Error [$errno]: $errstr in $errfile:$errline\n";
+        @file_put_contents($logFile, $logMessage, FILE_APPEND);
+    }
+    // Don't display errors in production
+    return !YII_DEBUG;
+}, E_ALL & ~E_DEPRECATED);
 
 // Register shutdown function to catch fatal errors
 register_shutdown_function(function() {
