@@ -484,16 +484,31 @@ error_log("=== about.php: Before HTML start ===");
                         </tr>
                         </thead>
                         <tbody>
-                        <?php foreach($SERVER as $key => $val): ?>
+                        <?php 
+                            // Only show important SERVER variables
+                            $importantServerVars = [
+                                'SERVER_SOFTWARE', 'SERVER_NAME', 'SERVER_PORT', 'SERVER_ADDR',
+                                'REQUEST_METHOD', 'REQUEST_URI', 'QUERY_STRING',
+                                'HTTP_HOST', 'HTTP_USER_AGENT', 'HTTP_ACCEPT', 'HTTP_ACCEPT_LANGUAGE',
+                                'DOCUMENT_ROOT', 'SCRIPT_FILENAME', 'SCRIPT_NAME', 'PHP_SELF',
+                                'REQUEST_TIME', 'REQUEST_TIME_FLOAT',
+                                'REMOTE_ADDR', 'REMOTE_PORT',
+                                'HTTPS', 'SERVER_PROTOCOL'
+                            ];
+                            
+                            foreach($importantServerVars as $key):
+                                if (!isset($SERVER[$key])) continue;
+                                $val = $SERVER[$key];
+                        ?>
                             <tr>
-                                <td><?= $key ?></td>
+                                <td><code><?= htmlspecialchars($key) ?></code></td>
                                 <td>
                                     <?php
                                     if( is_array($val) ) {
-                                        print_r($val);
+                                        echo '<pre>' . htmlspecialchars(print_r($val, true)) . '</pre>';
                                     }
                                     else {
-                                        echo $val;
+                                        echo htmlspecialchars($val);
                                     }
                                     ?>
                                 </td>
@@ -501,35 +516,71 @@ error_log("=== about.php: Before HTML start ===");
                         <?php endforeach; ?>
                         </tbody>
                     </table>
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i> <?= Yii::t('help', 'Only important server variables are shown. For full information, use support bundle.') ?>
+                    </div>
                 </div>
                 <div class="tab-pane fade" id="tab_4">
-                    <table class="table table-hover">
-                        <?php foreach($phpinfo as $key=>$val): ?>
-                            <thead>
-                            <tr class="info">
-                                <th colspan="2"><b><?= $key ?></b></th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <?php foreach($val as $param => $data): ?>
-                                <?php if( is_int($param) ): ?>
-                                    <tr class="active">
-                                        <td colspan="2">
-                                            <?= strip_tags($data) ?>
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <tr>
-                                        <td><?= $param ?></td>
-                                        <td>
-                                            <?php echo is_array($data) ? $data[0] : $data ?>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
+                    <?php if(!empty($phpinfo)): ?>
+                        <table class="table table-hover">
+                            <?php 
+                                // Only show important PHP info sections
+                                $importantSections = [
+                                    'PHP Core',
+                                    'Configuration',
+                                    'date',
+                                    'pcre',
+                                    'session',
+                                    'PDO',
+                                    'pdo_mysql',
+                                    'mysqlnd',
+                                    'mbstring',
+                                    'openssl',
+                                    'curl',
+                                    'zip',
+                                    'Zend OPcache'
+                                ];
+                                
+                                foreach($phpinfo as $key => $val):
+                                    // Skip if section is not important
+                                    if (!in_array($key, $importantSections)) continue;
+                            ?>
+                                <thead>
+                                <tr class="info">
+                                    <th colspan="2"><b><?= htmlspecialchars($key) ?></b></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach($val as $param => $data): ?>
+                                    <?php if( is_int($param) ): ?>
+                                        <tr class="active">
+                                            <td colspan="2">
+                                                <?= htmlspecialchars(strip_tags($data)) ?>
+                                            </td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td><code><?= htmlspecialchars($param) ?></code></td>
+                                            <td>
+                                                <?php 
+                                                $displayData = is_array($data) ? $data[0] : $data;
+                                                echo htmlspecialchars($displayData);
+                                                ?>
+                                            </td>
+                                        </tr>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                                </tbody>
                             <?php endforeach; ?>
-                            </tbody>
-                        <?php endforeach; ?>
-                    </table>
+                        </table>
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i> <?= Yii::t('help', 'Only important PHP configuration sections are shown. For full information, use support bundle.') ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-warning">
+                            <p><?= Yii::t('help', 'PHP information is not available. It will be generated on next page load.') ?></p>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div class="tab-pane fade" id="tab_5">
                     <dl>
