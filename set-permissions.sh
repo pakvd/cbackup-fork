@@ -40,15 +40,39 @@ else
 fi
 
 # Set permissions for bin files (if they exist on host)
+# These files may be owned by root (from worker container), so we try to change ownership first
 if [ -f "$CORE_DIR/bin/cbackup.jar" ]; then
-    chmod 555 "$CORE_DIR/bin/cbackup.jar"
-    echo "✓ Set permissions for cbackup.jar (555)"
+    # Try to change ownership to current user if file is owned by root
+    CURRENT_USER=$(whoami)
+    FILE_OWNER=$(stat -c "%U" "$CORE_DIR/bin/cbackup.jar" 2>/dev/null || stat -f "%Su" "$CORE_DIR/bin/cbackup.jar" 2>/dev/null || echo "unknown")
+    if [ "$FILE_OWNER" = "root" ] || [ "$FILE_OWNER" != "$CURRENT_USER" ]; then
+        # Try to change ownership (may require sudo)
+        sudo chown "$CURRENT_USER:$CURRENT_USER" "$CORE_DIR/bin/cbackup.jar" 2>/dev/null || true
+    fi
+    # Try to set permissions (suppress stderr - permission errors are expected if file is owned by root)
+    if chmod 555 "$CORE_DIR/bin/cbackup.jar" 2>/dev/null; then
+        echo "✓ Set permissions for cbackup.jar (555)"
+    else
+        # File may be owned by root from container - this is OK, entrypoint will fix it
+        echo "⚠ Skipped cbackup.jar (permission denied - will be set by entrypoint script in container)"
+    fi
 fi
 
 if [ -f "$CORE_DIR/bin/application.properties" ]; then
-    chmod 664 "$CORE_DIR/bin/application.properties"
-    chmod -x "$CORE_DIR/bin/application.properties"
-    echo "✓ Set permissions for application.properties (664, non-executable)"
+    # Try to change ownership to current user if file is owned by root
+    CURRENT_USER=$(whoami)
+    FILE_OWNER=$(stat -c "%U" "$CORE_DIR/bin/application.properties" 2>/dev/null || stat -f "%Su" "$CORE_DIR/bin/application.properties" 2>/dev/null || echo "unknown")
+    if [ "$FILE_OWNER" = "root" ] || [ "$FILE_OWNER" != "$CURRENT_USER" ]; then
+        # Try to change ownership (may require sudo)
+        sudo chown "$CURRENT_USER:$CURRENT_USER" "$CORE_DIR/bin/application.properties" 2>/dev/null || true
+    fi
+    # Try to set permissions (suppress stderr - permission errors are expected if file is owned by root)
+    if chmod 664 "$CORE_DIR/bin/application.properties" 2>/dev/null && chmod -x "$CORE_DIR/bin/application.properties" 2>/dev/null; then
+        echo "✓ Set permissions for application.properties (664, non-executable)"
+    else
+        # File may be owned by root from container - this is OK, entrypoint will fix it
+        echo "⚠ Skipped application.properties (permission denied - will be set by entrypoint script in container)"
+    fi
 fi
 
 echo "=== Permissions set successfully ==="
