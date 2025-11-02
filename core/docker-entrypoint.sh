@@ -186,17 +186,30 @@ if [ -f "/var/www/html/bin/application.properties" ]; then
 fi
 
 # Set correct permissions for yii files
+# Note: With volume mounts, permissions may be overridden by host filesystem
+# Try multiple times and methods to ensure permissions are set correctly
 # yii.bat should be non-writable, non-executable (444 = read-only)
 if [ -f "/var/www/html/yii.bat" ]; then
-    chmod 444 /var/www/html/yii.bat 2>/dev/null || true
+    # Try to set ownership first (may fail with volume mounts)
+    chown www-data:www-data /var/www/html/yii.bat 2>/dev/null || true
+    # Set permissions - try multiple approaches
+    chmod 444 /var/www/html/yii.bat 2>/dev/null || chmod 444 /var/www/html/yii.bat || true
+    chmod u-w /var/www/html/yii.bat 2>/dev/null || true
     chmod -x /var/www/html/yii.bat 2>/dev/null || true
-    echo "✓ Set permissions for yii.bat (444, non-executable)"
+    # Verify permissions were set
+    PERMS=$(stat -c "%a" /var/www/html/yii.bat 2>/dev/null || echo "unknown")
+    echo "✓ Set permissions for yii.bat (target: 444, actual: $PERMS)"
 fi
 # yii should be non-executable but readable
 if [ -f "/var/www/html/yii" ]; then
-    chmod 644 /var/www/html/yii 2>/dev/null || true
+    # Try to set ownership first (may fail with volume mounts)
+    chown www-data:www-data /var/www/html/yii 2>/dev/null || true
+    # Set permissions - try multiple approaches
+    chmod 644 /var/www/html/yii 2>/dev/null || chmod 644 /var/www/html/yii || true
     chmod -x /var/www/html/yii 2>/dev/null || true
-    echo "✓ Set permissions for yii (644, non-executable)"
+    # Verify permissions were set
+    PERMS=$(stat -c "%a" /var/www/html/yii 2>/dev/null || echo "unknown")
+    echo "✓ Set permissions for yii (target: 644, actual: $PERMS)"
 fi
 
 # Try to change ownership if possible (may fail with volume mounts, but try anyway)
