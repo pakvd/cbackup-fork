@@ -521,10 +521,44 @@ class TaskController extends Controller
      */
     protected function findModel($name)
     {
-        if (($model = Task::findOne(['name' => $name])) !== null) {
+        // Try to find task by name
+        $model = Task::findOne(['name' => $name]);
+        
+        // If not found and schema cache might be causing issues, try direct query
+        if ($model === null) {
+            try {
+                $db = Yii::$app->getDb();
+                $tableName = $db->getSchema()->getRawTableName(Task::tableName());
+                
+                // Verify table exists first
+                $tableSchema = $db->getSchema()->getTableSchema($tableName);
+                if ($tableSchema === null) {
+                    throw new NotFoundHttpException(Yii::t('app', 'The table {table} does not exist.', ['table' => $tableName]));
+                }
+                
+                // Try direct SQL query as fallback
+                $result = $db->createCommand()
+                    ->select('*')
+                    ->from($tableName)
+                    ->where(['name' => $name])
+                    ->queryOne();
+                
+                if ($result !== false) {
+                    // If found via SQL, create model instance
+                    $model = new Task();
+                    $model->setAttributes($result);
+                    $model->setOldAttributes($result);
+                    $model->setIsNewRecord(false);
+                }
+            } catch (\Exception $e) {
+                // If direct query also fails, task doesn't exist
+            }
+        }
+        
+        if ($model !== null) {
             return $model;
         } else {
-            throw new NotFoundHttpException('The requested page does not exist.');
+            throw new NotFoundHttpException(Yii::t('app', 'The requested task "{name}" does not exist.', ['name' => $name]));
         }
     }
 
