@@ -61,13 +61,37 @@ use app\widgets\MessageWidget;
                 </ul>
             </li>
             <?php
-                /** @noinspection PhpUnhandledExceptionInspection */
-                echo MessageWidget::widget();
+                // CRITICAL: For about page, skip MessageWidget to prevent DB queries
+                // Check current route
+                $currentRoute = $this->context->action->uniqueId ?? '';
+                $isAboutPage = (strpos($currentRoute, 'help/about') !== false);
+                
+                if (!$isAboutPage) {
+                    try {
+                        /** @noinspection PhpUnhandledExceptionInspection */
+                        echo MessageWidget::widget();
+                    } catch (\Throwable $e) {
+                        // If widget fails, skip it silently
+                        error_log("MessageWidget error (ignored): " . $e->getMessage());
+                    }
+                }
             ?>
             <li class="dropdown classic-menu-dropdown">
                 <a href="javascript:" class="dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                     <i class="fa fa-user-circle"></i>
-                    <span class="hidden-xs"><?= /** @noinspection PhpUndefinedFieldInspection */ StringHelper::ucname(Yii::$app->user->identity->userid) ?></span>
+                    <span class="hidden-xs"><?php
+                        // CRITICAL: For about page, avoid accessing user identity to prevent DB queries
+                        if (!$isAboutPage) {
+                            try {
+                                $identity = Yii::$app->user->identity;
+                                echo /** @noinspection PhpUndefinedFieldInspection */ StringHelper::ucname($identity->userid ?? 'User');
+                            } catch (\Throwable $e) {
+                                echo 'User';
+                            }
+                        } else {
+                            echo 'User';
+                        }
+                    ?></span>
                     <span class="caret"></span>
                 </a>
                 <ul class="dropdown-menu pull-right">

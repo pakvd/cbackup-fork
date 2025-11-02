@@ -26,7 +26,34 @@ use app\models\Plugin;
 
         <?php
 
-            $user = Yii::$app->getUser();
+            // CRITICAL: Wrap user access in try-catch to prevent DB queries during render
+            // For about page, we need to avoid any RBAC queries that might load schema
+            $user = null;
+            $isAboutPage = false;
+            try {
+                // Check if we're on about page - if so, disable RBAC checks
+                $currentRoute = $this->context->action->uniqueId ?? '';
+                $isAboutPage = (strpos($currentRoute, 'help/about') !== false);
+                
+                if (!$isAboutPage) {
+                    $user = Yii::$app->getUser();
+                } else {
+                    // For about page, create a mock user object that always denies access
+                    // to prevent RBAC queries
+                    $user = new class {
+                        public function can($permission) { return false; }
+                        public function isGuest() { return false; }
+                        public function getId() { return null; }
+                    };
+                }
+            } catch (\Throwable $e) {
+                // If user component fails, create mock
+                $user = new class {
+                    public function can($permission) { return false; }
+                    public function isGuest() { return false; }
+                    public function getId() { return null; }
+                };
+            }
 
             /**
              * Check if current request route is identical to param to
