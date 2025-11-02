@@ -208,7 +208,19 @@ class HelpController extends Controller
                 $this->layout = false; // No layout = no sidebar/header = no DB queries
                 error_log("Step 19.3: Layout disabled");
                 
-                $result = $this->render('about', [
+                // Also disable DB connection completely during render
+                $originalDbEnabled = isset($app->db) ? $app->db->getIsActive() : false;
+                if (isset($app->db)) {
+                    try {
+                        $app->db->close();
+                        error_log("Step 19.3.1: DB connection closed");
+                    } catch (\Throwable $e) {
+                        error_log("Step 19.3.1: DB close error (ignored): " . $e->getMessage());
+                    }
+                }
+                
+                error_log("Step 19.4: Starting renderPartial");
+                $result = $this->renderPartial('about', [
                     'phpinfo'      => $phpinfo,
                     'SERVER'       => $_SERVER,
                     'perms'        => $perms,
@@ -216,11 +228,22 @@ class HelpController extends Controller
                     'extensions'   => $extensions,
                     'dbVersion'    => $dbVersion,
                     'dbDriverName' => $dbDriverName,
-                ]);
+                ], false); // false = don't use layout
+                error_log("Step 19.5: renderPartial completed");
+                
+                // Restore DB connection if needed
+                if (isset($app->db) && $originalDbEnabled) {
+                    try {
+                        $app->db->open();
+                        error_log("Step 19.5.1: DB connection reopened");
+                    } catch (\Throwable $e) {
+                        error_log("Step 19.5.1: DB open error (ignored): " . $e->getMessage());
+                    }
+                }
                 
                 // Restore layout
                 $this->layout = $originalLayout;
-                error_log("Step 19.4: Layout restored");
+                error_log("Step 19.6: Layout restored");
                 
                 $renderCompleted = true;
                 $renderElapsed = microtime(true) - $renderStart;
