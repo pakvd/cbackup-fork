@@ -64,15 +64,29 @@ class MaintenanceBehavior extends Behavior
     {
         $lock = Yii::$app->basePath . DIRECTORY_SEPARATOR . 'update.lock';
         if (file_exists($lock)) {
+            // Try to get URL, but handle errors gracefully
+            try {
+                $url = Yii::$app->getRequest()->url;
+            } catch (\Throwable $e) {
+                // If URL cannot be determined yet, skip ignored routes check
+                $url = '';
+            }
+            
             foreach ($this->ignoredRoutes as $ignoredRoute) {
-                if (preg_match($ignoredRoute, Yii::$app->getRequest()->url)) {
+                if ($url && preg_match($ignoredRoute, $url)) {
                     return;
                 }
             }
             Yii::$app->catchAll = [$this->redirectUrl];
         } else {
-            if (preg_match('/' . urlencode($this->redirectUrl) . '/im', urlencode(Yii::$app->getRequest()->url))) {
-                Yii::$app->getResponse()->redirect(Yii::$app->homeUrl)->send();
+            // Try to get URL, but handle errors gracefully
+            try {
+                $url = Yii::$app->getRequest()->url;
+                if (preg_match('/' . urlencode($this->redirectUrl) . '/im', urlencode($url))) {
+                    Yii::$app->getResponse()->redirect(Yii::$app->homeUrl)->send();
+                }
+            } catch (\Throwable $e) {
+                // If URL cannot be determined, skip redirect check
             }
         }
     }
