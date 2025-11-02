@@ -204,7 +204,13 @@ class Cds extends Model
     public function isGitRepo()
     {
         $path_to_repo = $this->content_dir . DIRECTORY_SEPARATOR . '.git';
-        return (file_exists($path_to_repo) || is_dir($path_to_repo)) ? true : false;
+        try {
+            // Use @ to suppress warnings if directory is not accessible
+            return @file_exists($path_to_repo) || @is_dir($path_to_repo);
+        } catch (\Exception $e) {
+            // If we can't check, assume it's not a git repo
+            return false;
+        }
     }
 
     /**
@@ -221,37 +227,59 @@ class Cds extends Model
         $vendor  = '';
 
         /** DirectoryIterator init */
-        $rdi = new \RecursiveDirectoryIterator($this->content_dir, \FilesystemIterator::SKIP_DOTS);
-        $it  = new \RecursiveIteratorIterator($rdi, \RecursiveIteratorIterator::SELF_FIRST);
+        // Use SKIP_DOTS and catch exceptions for permission errors
+        try {
+            $rdi = new \RecursiveDirectoryIterator($this->content_dir, \RecursiveDirectoryIterator::SKIP_DOTS | \RecursiveDirectoryIterator::CURRENT_AS_SELF);
+            $it  = new \RecursiveIteratorIterator($rdi, \RecursiveIteratorIterator::SELF_FIRST);
 
-        foreach ($it as $spl_file_info) {
+            foreach ($it as $spl_file_info) {
+                try {
+                    // Skip .git directory and any permission-denied entries
+                    $fileName = $spl_file_info->getFileName();
+                    if ($fileName === '.git' || $fileName === '' || $fileName === null) {
+                        $it->next();
+                        continue;
+                    }
 
-            /** Get content root */
-            if ($spl_file_info->isDir() && $it->getDepth() == 0 && $spl_file_info->getFileName() !== '.git') {
-                $content = $spl_file_info->getFileName();
-                $result[$content] = [];
-            }
+                    // Skip if we can't access the file/directory
+                    if (!$spl_file_info->isReadable()) {
+                        continue;
+                    }
 
-            /** Get content sub-directories */
-            if ($spl_file_info->isDir() && $it->getDepth() == 1) {
-                $vendor = $spl_file_info->getFileName();
-            }
+                    /** Get content root */
+                    if ($spl_file_info->isDir() && $it->getDepth() == 0) {
+                        $content = $fileName;
+                        $result[$content] = [];
+                    }
 
-            /** Get files */
-            if ($spl_file_info->isFile() &&  $it->getDepth() == 2) {
-                $class     = preg_replace('/\.php/i', '', $spl_file_info->getFileName());
-                $file_info = explode('_', Inflector::camel2id($class, '_'));
-                if (array_key_exists(0, $file_info) && $file_info[0] == 'content') {
-                    $result[$content][] = [
-                        'name'      => ucfirst($vendor) . ' ' . strtoupper($file_info[1]),
-                        'vendor'    => $vendor,
-                        'protocol'  => (array_key_exists(2, $file_info)) ? strtoupper($file_info[2]) : null,
-                        'class'     => $class,
-                        'file_path' => $this->content_dir . DIRECTORY_SEPARATOR . $content . DIRECTORY_SEPARATOR . $vendor . DIRECTORY_SEPARATOR . $spl_file_info->getFileName()
-                    ];
+                    /** Get content sub-directories */
+                    if ($spl_file_info->isDir() && $it->getDepth() == 1) {
+                        $vendor = $fileName;
+                    }
+
+                    /** Get files */
+                    if ($spl_file_info->isFile() &&  $it->getDepth() == 2) {
+                        $class     = preg_replace('/\.php/i', '', $fileName);
+                        $file_info = explode('_', Inflector::camel2id($class, '_'));
+                        if (array_key_exists(0, $file_info) && $file_info[0] == 'content') {
+                            $result[$content][] = [
+                                'name'      => ucfirst($vendor) . ' ' . strtoupper($file_info[1]),
+                                'vendor'    => $vendor,
+                                'protocol'  => (array_key_exists(2, $file_info)) ? strtoupper($file_info[2]) : null,
+                                'class'     => $class,
+                                'file_path' => $this->content_dir . DIRECTORY_SEPARATOR . $content . DIRECTORY_SEPARATOR . $vendor . DIRECTORY_SEPARATOR . $fileName
+                            ];
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Skip files/directories we can't access (e.g., .git with permission issues)
+                    continue;
                 }
             }
-
+        } catch (\Exception $e) {
+            // If content directory doesn't exist or isn't accessible, return empty result
+            // Log error but don't throw exception - allow module to work with empty dataset
+            error_log("CDS: Cannot read content directory: " . $e->getMessage());
         }
 
         return $result;

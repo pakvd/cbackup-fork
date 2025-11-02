@@ -46,21 +46,37 @@ class HelpController extends Controller
     public function actionAbout()
     {
 
+        // Cache all expensive operations to prevent page hanging
+        // These values rarely change, so cache for 5 minutes
+        
         $sysinfo = new Sysinfo();
-
-        // Cache plugins list to avoid repeated schema loading on every page load
-        // Plugin list rarely changes, so cache for 5 minutes
-        // Use asArray(false) to get ActiveRecords but skip unnecessary processing
+        
+        // Cache PHP info (phpinfo() is expensive)
+        $phpinfo = Yii::$app->cache->getOrSet('help_about_phpinfo', function() use ($sysinfo) {
+            return $sysinfo->getPhpInfo();
+        }, 300); // Cache for 5 minutes
+        
+        // Cache plugins list to avoid repeated schema loading
         $plugins = Yii::$app->cache->getOrSet('help_about_plugins', function() {
             return Plugin::find()->all();
         }, 300); // Cache for 5 minutes
+        
+        // Cache permissions check (many file system operations)
+        $perms = Yii::$app->cache->getOrSet('help_about_permissions', function() {
+            return Install::checkPermissions();
+        }, 300); // Cache for 5 minutes
+        
+        // Cache PHP extensions list
+        $extensions = Yii::$app->cache->getOrSet('help_about_extensions', function() {
+            return Install::getPhpExtensions();
+        }, 300); // Cache for 5 minutes
 
         return $this->render('about', [
-            'phpinfo'    => $sysinfo->getPhpInfo(),
+            'phpinfo'    => $phpinfo,
             'SERVER'     => $_SERVER, // Pass as SERVER without $ prefix for display
-            'perms'      => Install::checkPermissions(),
+            'perms'      => $perms,
             'plugins'    => $plugins,
-            'extensions' => Install::getPhpExtensions()
+            'extensions' => $extensions
         ]);
 
     }
