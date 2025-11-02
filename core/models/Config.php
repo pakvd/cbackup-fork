@@ -22,6 +22,7 @@ namespace app\models;
 use Yii;
 use yii\base\DynamicModel;
 use yii\db\ActiveRecord;
+use yii\helpers\ArrayHelper;
 use GitWrapper\GitWrapper;
 
 
@@ -215,20 +216,112 @@ class Config extends ActiveRecord
         $key  = [];
         $file = Yii::$app->basePath.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'application.properties';
 
-        if( preg_match('/^javaScheduler(\w+)$/', $this->attributes['key'], $key) ) {
+        if (preg_match('/^javaScheduler(\w+)$/', $this->attributes['key'], $key)) {
 
-            $key  = array_filter($key);
-            $key  = array_values($key);
-            $key  = array_key_exists(1, $key) ? mb_strtolower($key[1]) : '';
+            $key = array_filter($key);
+            $key = array_values($key);
+            $key = array_key_exists(1, $key) ? mb_strtolower($key[1]) : '';
 
-            if( !empty($key) && file_exists($file) && is_writable($file) ) {
-                $in  = file_get_contents($file);
-                $out = preg_replace("/^(sshd\.shell\.$key)=.*$/im", "$1={$this->attributes['value']}", $in);
-                file_put_contents($file, $out);
+            if (!empty($key)) {
+                // If file doesn't exist, sync all values to create it
+                if (!file_exists($file)) {
+                    $data = ArrayHelper::map(static::find()->asArray()->all(), 'key', 'value');
+                    static::syncApplicationProperties($data);
+                } else if (is_writable($file)) {
+                    // File exists and is writable, update the specific key
+                    $in  = file_get_contents($file);
+                    $out = preg_replace("/^(sshd\.shell\.$key)=.*$/im", "$1={$this->attributes['value']}", $in);
+                    file_put_contents($file, $out);
+                }
             }
 
         }
 
+    }
+
+    /**
+     * Sync database values to bin/application.properties file
+     * Creates the file if it doesn't exist or updates existing values
+     *
+     * @param  array $data Database configuration data
+     * @return bool
+     */
+    public static function syncApplicationProperties($data)
+    {
+        $file = Yii::$app->basePath.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'application.properties';
+        $dir  = dirname($file);
+
+        // Create directory if it doesn't exist
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        // Read existing file if it exists
+        $content = '';
+        if (file_exists($file)) {
+            $content = file_get_contents($file);
+        } else {
+            // If file doesn't exist, try to copy from worker template
+            $workerTemplate = Yii::$app->basePath.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'worker'.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'main'.DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'application.properties';
+            if (file_exists($workerTemplate)) {
+                $content = file_get_contents($workerTemplate);
+            } else {
+                // Create a default template if neither exists
+                $content = "# SSH Daemon Shell Configuration\n"
+                    . "sshd.shell.port=8437\n"
+                    . "sshd.shell.enabled=false\n"
+                    . "sshd.shell.username=cbadmin\n"
+                    . "sshd.shell.password=\n"
+                    . "sshd.shell.host=localhost\n"
+                    . "sshd.shell.auth.authType=SIMPLE\n"
+                    . "sshd.shell.prompt.title=cbackup\n"
+                    . "\n"
+                    . "# Spring Configuration\n"
+                    . "spring.main.banner-mode=off\n"
+                    . "\n"
+                    . "# cBackup Configuration\n"
+                    . "cbackup.scheme=http\n"
+                    . "cbackup.site=http://web/index.php\n"
+                    . "cbackup.token=\n";
+            }
+        }
+
+        // Update values from database
+        foreach ($data as $key => $value) {
+            $match = [];
+
+            if (preg_match('/^javaScheduler(\w+)$/', $key, $match)) {
+                $match = array_filter($match);
+                $match = array_values($match);
+                $match = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
+                $pkey  = "sshd.shell.$match";
+
+                if (!empty($match)) {
+                    // Escape special regex characters in the property key
+                    $escapedPkey = preg_quote($pkey, '/');
+                    
+                    // Replace or add the property
+                    if (preg_match("/^{$escapedPkey}=.*$/im", $content)) {
+                        // Property exists, replace it
+                        $content = preg_replace("/^{$escapedPkey}=.*$/im", "{$pkey}={$value}", $content);
+                    } else {
+                        // Property doesn't exist, add it before the first comment or at the end
+                        if (preg_match("/^# SSH Daemon Shell Configuration/im", $content)) {
+                            $content = preg_replace("/^(# SSH Daemon Shell Configuration)/im", "$1\n{$pkey}={$value}", $content);
+                        } else {
+                            $content .= "\n{$pkey}={$value}";
+                        }
+                    }
+                }
+            }
+        }
+
+        // Write the updated content
+        if (is_writable($dir) || (file_exists($file) && is_writable($file))) {
+            return file_put_contents($file, $content) !== false;
+        }
+
+        return false;
     }
 
     /**
@@ -245,29 +338,34 @@ class Config extends ActiveRecord
         $res  = [];
         $file = Yii::$app->basePath.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'application.properties';
 
-        if(file_exists($file)) {
+        // If file doesn't exist, try to sync it
+        if (!file_exists($file)) {
+            static::syncApplicationProperties($data);
+            // Re-check after sync
+            if (!file_exists($file)) {
+                return; // Could not create file, skip check
+            }
+        }
 
-            $props = parse_ini_file($file, false, INI_SCANNER_RAW);
+        $props = parse_ini_file($file, false, INI_SCANNER_RAW);
 
-            if(!empty($props)) {
+        if (!empty($props)) {
 
-                foreach ($data as $key => $value) {
+            foreach ($data as $key => $value) {
 
-                    $match = [];
+                $match = [];
 
-                    if( preg_match('/^javaScheduler(\w+)$/', $key, $match) ) {
+                if (preg_match('/^javaScheduler(\w+)$/', $key, $match)) {
 
-                        $match  = array_filter($match);
-                        $match  = array_values($match);
-                        $match  = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
-                        $pkey   = "sshd.shell.$match";
+                    $match = array_filter($match);
+                    $match = array_values($match);
+                    $match = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
+                    $pkey  = "sshd.shell.$match";
 
-                        if( array_key_exists($pkey, $props) ) {
-                            if( $props[$pkey] != $value ) {
-                                $res[] = $pkey;
-                            }
+                    if (array_key_exists($pkey, $props)) {
+                        if ($props[$pkey] != $value) {
+                            $res[] = $pkey;
                         }
-
                     }
 
                 }
@@ -276,7 +374,30 @@ class Config extends ActiveRecord
 
         }
 
-        if( !empty($res) ) {
+        // If there's a mismatch, try to sync and check again
+        if (!empty($res)) {
+            if (static::syncApplicationProperties($data)) {
+                // Re-check after sync
+                $props = parse_ini_file($file, false, INI_SCANNER_RAW);
+                if (!empty($props)) {
+                    $res = [];
+                    foreach ($data as $key => $value) {
+                        $match = [];
+                        if (preg_match('/^javaScheduler(\w+)$/', $key, $match)) {
+                            $match = array_filter($match);
+                            $match = array_values($match);
+                            $match = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
+                            $pkey  = "sshd.shell.$match";
+                            if (array_key_exists($pkey, $props) && $props[$pkey] != $value) {
+                                $res[] = $pkey;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!empty($res)) {
             \Y::flash('warning', Yii::t('config', 'Mismatched data in application.properties and database for following keys: <b>{0}</b>', join(', ', $res)));
         }
 
