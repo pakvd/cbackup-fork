@@ -54,49 +54,88 @@ class HelpController extends Controller
         // Set very aggressive timeout
         @set_time_limit(2); // 2 seconds max
         
-        // Log start time
-        error_log("Start time: " . $startTime);
+        error_log("Step 1: Timeout set");
         
-        // COMPLETELY DISABLE database for this action
-        $originalDb = Yii::$app->db;
-        $originalSchemaCache = $originalDb->enableSchemaCache ?? false;
+        // Initialize ALL data with empty defaults IMMEDIATELY - BEFORE any Yii component access
+        $phpinfo = [];
+        $plugins = [];
+        $perms = [];
+        $extensions = [];
+        $dbVersion = 'N/A';
+        $dbDriverName = 'mysql';
+        
+        error_log("Step 2: Defaults initialized");
+        
+        // Try to access Yii::$app safely
+        try {
+            error_log("Step 3: Trying to access Yii::\$app");
+            $app = \Yii::$app;
+            error_log("Step 4: Yii::\$app accessed");
+            
+            // Try to disable schema cache BEFORE accessing cache
+            if (isset($app->db)) {
+                error_log("Step 5: Accessing db component");
+                $originalDb = $app->db;
+                $originalSchemaCache = $originalDb->enableSchemaCache ?? false;
+                $originalDb->enableSchemaCache = false;
+                error_log("Step 6: Schema cache disabled");
+            } else {
+                error_log("Step 5: db component not found");
+                $originalDb = null;
+                $originalSchemaCache = false;
+            }
+            
+            // ONLY try to load from cache - with strict timeout and error handling
+            error_log("Step 7: Starting cache operations");
+            $cacheStart = microtime(true);
+            
+            if (isset($app->cache)) {
+                error_log("Step 8: Cache component found");
+                try {
+                    @set_time_limit(1); // 1 second for cache operations
+                    error_log("Step 9: Trying cache get operations");
+                    
+                    $phpinfo = @$app->cache->get('help_about_phpinfo') ?: [];
+                    error_log("Step 10: phpinfo loaded");
+                    
+                    $plugins = @$app->cache->get('help_about_plugins') ?: [];
+                    error_log("Step 11: plugins loaded");
+                    
+                    $perms = @$app->cache->get('help_about_permissions') ?: [];
+                    error_log("Step 12: perms loaded");
+                    
+                    $extensions = @$app->cache->get('help_about_extensions') ?: [];
+                    error_log("Step 13: extensions loaded");
+                    
+                    $dbInfo = @$app->cache->get('help_about_db_info');
+                    error_log("Step 14: dbInfo loaded");
+                    if ($dbInfo && is_array($dbInfo)) {
+                        $dbVersion = $dbInfo['version'] ?? 'N/A';
+                        $dbDriverName = $dbInfo['driverName'] ?? 'mysql';
+                    }
+                } catch (\Throwable $e) {
+                    error_log("Cache read error (ignored): " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+                    // Use defaults
+                }
+            } else {
+                error_log("Step 8: Cache component not found, using defaults");
+            }
+            
+            $cacheElapsed = microtime(true) - $cacheStart;
+            error_log("Step 15: Cache read time: {$cacheElapsed}s");
+            
+        } catch (\Throwable $e) {
+            error_log("CRITICAL ERROR accessing Yii::\$app: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            // Continue with defaults
+            $originalDb = null;
+            $originalSchemaCache = false;
+        }
         
         try {
-            // Disable schema cache completely
-            $originalDb->enableSchemaCache = false;
-            
-            // Disable DB connection temporarily by setting it to null in registry (if possible)
-            // But we'll use a try-catch approach instead
-            
-            // Initialize ALL data with empty defaults IMMEDIATELY
-            $phpinfo = [];
-            $plugins = [];
-            $perms = [];
-            $extensions = [];
-            $dbVersion = 'N/A';
-            $dbDriverName = 'mysql';
-            
-            // ONLY try to load from cache - with strict timeout
-            $cacheStart = microtime(true);
-            try {
-                @set_time_limit(1); // 1 second for cache operations
-                $phpinfo = Yii::$app->cache->get('help_about_phpinfo') ?: [];
-                $plugins = Yii::$app->cache->get('help_about_plugins') ?: [];
-                $perms = Yii::$app->cache->get('help_about_permissions') ?: [];
-                $extensions = Yii::$app->cache->get('help_about_extensions') ?: [];
-                $dbInfo = Yii::$app->cache->get('help_about_db_info');
-                if ($dbInfo && is_array($dbInfo)) {
-                    $dbVersion = $dbInfo['version'] ?? 'N/A';
-                    $dbDriverName = $dbInfo['driverName'] ?? 'mysql';
-                }
-            } catch (\Throwable $e) {
-                error_log("Cache read error (ignored): " . $e->getMessage());
-                // Use defaults
-            }
-            $cacheElapsed = microtime(true) - $cacheStart;
-            error_log("Cache read time: {$cacheElapsed}s");
             
             // Ensure plugins are simple objects
+            error_log("Step 16: Processing plugins");
             $safePlugins = [];
             if (!empty($plugins)) {
                 foreach ($plugins as $plugin) {
@@ -120,11 +159,12 @@ class HelpController extends Controller
                     }
                 }
             }
+            error_log("Step 17: Plugins processed");
 
             // Check time before render
             $beforeRender = microtime(true);
             $elapsedBeforeRender = $beforeRender - $startTime;
-            error_log("Time before render: {$elapsedBeforeRender}s");
+            error_log("Step 18: Time before render: {$elapsedBeforeRender}s");
             
             if ($elapsedBeforeRender > 1.5) {
                 error_log("TOO SLOW before render ({$elapsedBeforeRender}s), returning minimal page");
@@ -140,6 +180,7 @@ class HelpController extends Controller
             }
             
             // Render with output buffering and timeout
+            error_log("Step 19: Starting render");
             $renderStart = microtime(true);
             ob_start();
             try {
@@ -154,10 +195,10 @@ class HelpController extends Controller
                 ]);
                 
                 $renderElapsed = microtime(true) - $renderStart;
-                error_log("Render time: {$renderElapsed}s");
+                error_log("Step 20: Render time: {$renderElapsed}s");
                 
                 $totalElapsed = microtime(true) - $startTime;
-                error_log("Total time: {$totalElapsed}s");
+                error_log("Step 21: Total time: {$totalElapsed}s");
                 error_log("=== HelpController::actionAbout() END ===");
                 
                 return $result;
@@ -179,7 +220,13 @@ class HelpController extends Controller
             
         } finally {
             // Restore schema cache
-            $originalDb->enableSchemaCache = $originalSchemaCache;
+            if ($originalDb !== null) {
+                try {
+                    $originalDb->enableSchemaCache = $originalSchemaCache;
+                } catch (\Throwable $e) {
+                    // Ignore
+                }
+            }
             error_log("=== HelpController::actionAbout() FINALLY ===");
         }
 
