@@ -185,6 +185,20 @@ if [ -f "/var/www/html/bin/application.properties" ]; then
     echo "✓ Set permissions for application.properties (664)"
 fi
 
+# Set correct permissions for yii files
+# yii.bat should be non-writable, non-executable (444 = read-only)
+if [ -f "/var/www/html/yii.bat" ]; then
+    chmod 444 /var/www/html/yii.bat 2>/dev/null || true
+    chmod -x /var/www/html/yii.bat 2>/dev/null || true
+    echo "✓ Set permissions for yii.bat (444, non-executable)"
+fi
+# yii should be non-executable but readable
+if [ -f "/var/www/html/yii" ]; then
+    chmod 644 /var/www/html/yii 2>/dev/null || true
+    chmod -x /var/www/html/yii 2>/dev/null || true
+    echo "✓ Set permissions for yii (644, non-executable)"
+fi
+
 # Try to change ownership if possible (may fail with volume mounts, but try anyway)
 chown -R www-data:www-data /var/www/html/runtime 2>/dev/null || true
 chown -R www-data:www-data /var/www/html/web/assets 2>/dev/null || true
