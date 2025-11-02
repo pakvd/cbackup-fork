@@ -98,20 +98,55 @@ error_log("=== about.php: Before HTML start ===");
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#"><i class="fa fa-ellipsis-v"></i>&nbsp;<i class="fa fa-angle-down"></i></a>
                     <ul class="dropdown-menu">
                         <li>
-                            <a href="https://github.com/cBackup/main/issues" target="_blank"><?= Yii::t('help', 'Submit issue') ?></a>
+                            <a href="https://github.com/cBackup/main/issues" target="_blank"><?php 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::t('help', 'Submit issue')\n", FILE_APPEND | LOCK_EX);
+                                echo htmlspecialchars(Yii::t('help', 'Submit issue')); 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::t('help', 'Submit issue')\n", FILE_APPEND | LOCK_EX);
+                            ?></a>
                         </li>
                         <li>
-                            <a href="<?= \yii\helpers\Url::to(['/help/support']) ?>"><?= Yii::t('help', 'Create support bundle') ?></a>
+                            <a href="<?php 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Url::to(['/help/support'])\n", FILE_APPEND | LOCK_EX);
+                                error_log("=== about.php: Before Url::to(['/help/support']) ===");
+                                try {
+                                    // CRITICAL: Url::to() may trigger DB queries through urlManager
+                                    $supportUrl = \yii\helpers\Url::to(['/help/support']);
+                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Url::to() returned: " . $supportUrl . "\n", FILE_APPEND | LOCK_EX);
+                                    echo htmlspecialchars($supportUrl);
+                                } catch (\Throwable $e) {
+                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Url::to() ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
+                                    error_log("=== about.php: Url::to() ERROR: " . $e->getMessage());
+                                    echo '/help/support'; // Fallback
+                                }
+                                error_log("=== about.php: After Url::to(['/help/support']) ===");
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Url::to(['/help/support'])\n", FILE_APPEND | LOCK_EX);
+                            ?>"><?php 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::t('help', 'Create support bundle')\n", FILE_APPEND | LOCK_EX);
+                                echo htmlspecialchars(Yii::t('help', 'Create support bundle')); 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::t('help', 'Create support bundle')\n", FILE_APPEND | LOCK_EX);
+                            ?></a>
                         </li>
                     </ul>
                 </li>
             </ul>
+            <?php 
+                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before tab-content div\n", FILE_APPEND | LOCK_EX);
+                error_log("=== about.php: Before tab-content div ===");
+            ?>
             <div class="tab-content">
                 <div class="tab-pane fade active in" id="tab_1">
+                    <?php 
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before table with Generic info\n", FILE_APPEND | LOCK_EX);
+                        error_log("=== about.php: Before table with Generic info ===");
+                    ?>
                     <table class="table table-hover">
                         <thead>
                         <tr>
-                            <th colspan="3" class="bg-info"><?= Yii::t('app', 'Generic info') ?></th>
+                            <th colspan="3" class="bg-info"><?php 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::t('app', 'Generic info')\n", FILE_APPEND | LOCK_EX);
+                                echo htmlspecialchars(Yii::t('app', 'Generic info')); 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::t('app', 'Generic info')\n", FILE_APPEND | LOCK_EX);
+                            ?></th>
                         </tr>
                         <tr>
                             <th><?= Yii::t('app', 'Parameter') ?></th>
