@@ -61,8 +61,20 @@ RUN echo "error_reporting = E_ALL & ~E_DEPRECATED" > /usr/local/etc/php/conf.d/d
 # In production, you can enable opcache but should restart PHP-FPM after code changes
 RUN echo "opcache.enable=0" > /usr/local/etc/php/conf.d/opcache.ini || true
 
-# Copy PHP-FPM pool configuration to increase process limit
-COPY php-fpm-pool.conf /usr/local/etc/php-fpm.d/zzz-custom.conf
+# Update PHP-FPM pool configuration to increase process limit
+# Modify the default www.conf file directly to ensure settings are applied
+RUN sed -i 's/^pm.max_children =.*/pm.max_children = 20/' /usr/local/etc/php-fpm.d/www.conf && \
+    sed -i 's/^pm.start_servers =.*/pm.start_servers = 5/' /usr/local/etc/php-fpm.d/www.conf && \
+    sed -i 's/^pm.min_spare_servers =.*/pm.min_spare_servers = 3/' /usr/local/etc/php-fpm.d/www.conf && \
+    sed -i 's/^pm.max_spare_servers =.*/pm.max_spare_servers = 10/' /usr/local/etc/php-fpm.d/www.conf && \
+    sed -i 's/^request_terminate_timeout =.*/request_terminate_timeout = 60s/' /usr/local/etc/php-fpm.d/www.conf || \
+    (echo "" >> /usr/local/etc/php-fpm.d/www.conf && \
+     echo "; Custom PHP-FPM pool settings" >> /usr/local/etc/php-fpm.d/www.conf && \
+     echo "pm.max_children = 20" >> /usr/local/etc/php-fpm.d/www.conf && \
+     echo "pm.start_servers = 5" >> /usr/local/etc/php-fpm.d/www.conf && \
+     echo "pm.min_spare_servers = 3" >> /usr/local/etc/php-fpm.d/www.conf && \
+     echo "pm.max_spare_servers = 10" >> /usr/local/etc/php-fpm.d/www.conf && \
+     echo "request_terminate_timeout = 60s" >> /usr/local/etc/php-fpm.d/www.conf)
 
 # Set Docker environment variable for application detection
 ENV DOCKER_CONTAINER=true
