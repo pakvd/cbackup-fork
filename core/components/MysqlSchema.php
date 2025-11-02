@@ -49,31 +49,49 @@ class MysqlSchema extends BaseSchema
                 
                 // If cache miss (false) or cached null, verify table exists
                 // Cache miss means we haven't checked yet, cached null might be wrong
+                // Use faster method: try to query table directly instead of information_schema
                 try {
-                    $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
-                    $tableExists = $this->db->createCommand()
-                        ->select('COUNT(*)')
-                        ->from('information_schema.tables')
-                        ->where([
-                            'table_schema' => $dbName,
-                            'table_name' => $name
-                        ])
-                        ->queryScalar() > 0;
-                    
-                    // If table exists, load schema (will be cached automatically by parent)
-                    if ($tableExists) {
-                        // Clear potentially incorrect null cache
+                    // Faster check: try to query table directly (LIMIT 1 is very fast)
+                    // This avoids slow information_schema queries
+                    try {
+                        $this->db->createCommand("SELECT 1 FROM `{$name}` LIMIT 1")->queryScalar();
+                        // Table exists - clear potentially incorrect null cache and load schema
                         if ($table === null) {
                             $cache->delete($cacheKey);
                         }
                         return $this->loadTableSchema($name);
+                    } catch (\yii\db\Exception $tableEx) {
+                        // If query fails, table might not exist or have wrong name
+                        // Fallback to information_schema check only if it's a "table doesn't exist" error
+                        if (strpos($tableEx->getMessage(), "doesn't exist") !== false || 
+                            strpos($tableEx->getMessage(), "Unknown table") !== false ||
+                            $tableEx->getCode() == '42S02') {
+                            // Table doesn't exist
+                            return null;
+                        }
+                        
+                        // Other error (permissions, connection, etc) - try information_schema
+                        $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
+                        $tableExists = $this->db->createCommand()
+                            ->select('COUNT(*)')
+                            ->from('information_schema.tables')
+                            ->where([
+                                'table_schema' => $dbName,
+                                'table_name' => $name
+                            ])
+                            ->queryScalar() > 0;
+                        
+                        if ($tableExists) {
+                            if ($table === null) {
+                                $cache->delete($cacheKey);
+                            }
+                            return $this->loadTableSchema($name);
+                        }
+                        
+                        return null;
                     }
-                    
-                    // Table doesn't exist, return null
-                    // Note: We don't cache null to avoid stale null values
-                    return null;
                 } catch (\Throwable $e) {
-                    // If check fails, try to load schema normally
+                    // If all checks fail, try to load schema normally
                     // This handles connection issues gracefully
                     return $this->loadTableSchema($name);
                 }
