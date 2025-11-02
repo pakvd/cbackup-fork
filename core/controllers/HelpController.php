@@ -48,28 +48,66 @@ class HelpController extends Controller
 
         // Cache all expensive operations to prevent page hanging
         // These values rarely change, so cache for 5 minutes
+        // Use safe wrappers to prevent timeouts on first load
         
         $sysinfo = new Sysinfo();
         
-        // Cache PHP info (phpinfo() is expensive)
-        $phpinfo = Yii::$app->cache->getOrSet('help_about_phpinfo', function() use ($sysinfo) {
+        // Helper function to safely get cached or default value
+        $safeCacheGet = function($key, $callback, $default = null) {
+            try {
+                // Try to get from cache first
+                $cached = Yii::$app->cache->get($key);
+                if ($cached !== false) {
+                    return $cached;
+                }
+                
+                // If not cached, try to generate but with timeout protection
+                try {
+                    $result = call_user_func($callback);
+                    Yii::$app->cache->set($key, $result, 300); // Cache for 5 minutes
+                    return $result;
+                } catch (\Throwable $e) {
+                    // If generation fails, return default and cache it briefly to prevent repeated failures
+                    error_log("HelpController: Failed to generate $key: " . $e->getMessage());
+                    Yii::$app->cache->set($key, $default, 60); // Cache default for 1 minute
+                    return $default;
+                }
+            } catch (\Throwable $e) {
+                error_log("HelpController: Error in cache for $key: " . $e->getMessage());
+                return $default;
+            }
+        };
+        
+        // Cache PHP info (phpinfo() is expensive) - use empty array as fallback
+        $phpinfo = $safeCacheGet('help_about_phpinfo', function() use ($sysinfo) {
             return $sysinfo->getPhpInfo();
-        }, 300); // Cache for 5 minutes
+        }, []);
         
-        // Cache plugins list to avoid repeated schema loading
-        $plugins = Yii::$app->cache->getOrSet('help_about_plugins', function() {
+        // Cache plugins list - use empty array as fallback
+        $plugins = $safeCacheGet('help_about_plugins', function() {
             return Plugin::find()->all();
-        }, 300); // Cache for 5 minutes
+        }, []);
         
-        // Cache permissions check (many file system operations)
-        $perms = Yii::$app->cache->getOrSet('help_about_permissions', function() {
-            return Install::checkPermissions();
-        }, 300); // Cache for 5 minutes
+        // Cache permissions check - use empty array as fallback to prevent timeout
+        // This is the most expensive operation, so we make it optional
+        $perms = $safeCacheGet('help_about_permissions', function() {
+            // Set execution time limit for this operation (10 seconds)
+            $oldLimit = ini_get('max_execution_time');
+            @set_time_limit(10);
+            try {
+                $result = Install::checkPermissions();
+                @set_time_limit($oldLimit);
+                return $result;
+            } catch (\Throwable $e) {
+                @set_time_limit($oldLimit);
+                throw $e;
+            }
+        }, []);
         
-        // Cache PHP extensions list
-        $extensions = Yii::$app->cache->getOrSet('help_about_extensions', function() {
+        // Cache PHP extensions list - use empty array as fallback
+        $extensions = $safeCacheGet('help_about_extensions', function() {
             return Install::getPhpExtensions();
-        }, 300); // Cache for 5 minutes
+        }, []);
 
         return $this->render('about', [
             'phpinfo'    => $phpinfo,
