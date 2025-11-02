@@ -265,10 +265,13 @@ error_log("=== about.php: Before HTML start ===");
                             <td><?= Yii::t('help', 'Java version') ?></td>
                             <td colspan="2">
                                 <?php
+                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Java version check\n", FILE_APPEND | LOCK_EX);
+                                    error_log("=== about.php: Before Java version check ===");
                                     // Safe version - wrap in try-catch to prevent hanging
                                     try {
                                         @set_time_limit(1); // 1 second max for Java version check
                                         $java = \app\models\Sysinfo::getJavaVersion();
+                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Java version check completed\n", FILE_APPEND | LOCK_EX);
                                         if (is_null($java)) {
                                             // Check if we're in Docker environment
                                             $isDocker = getenv('DOCKER_CONTAINER') === 'true' || getenv('container') === 'docker';
@@ -281,8 +284,12 @@ error_log("=== about.php: Before HTML start ===");
                                             echo htmlspecialchars($java);
                                         }
                                     } catch (\Throwable $e) {
+                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Java version check ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
+                                        error_log("=== about.php: Java version check ERROR: " . $e->getMessage());
                                         echo '<span class="text-yellow">N/A (timeout or error)</span>';
                                     }
+                                    error_log("=== about.php: After Java version check ===");
+                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Java version check\n", FILE_APPEND | LOCK_EX);
                                 ?>
                             </td>
                         </tr>
@@ -290,18 +297,31 @@ error_log("=== about.php: Before HTML start ===");
                             <td><?= Yii::t('help', 'Git version') ?></td>
                             <td colspan="2">
                                 <?php
+                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Git version check\n", FILE_APPEND | LOCK_EX);
+                                    error_log("=== about.php: Before Git version check ===");
                                     // Safe version - wrap in try-catch to prevent hanging
                                     try {
                                         @set_time_limit(1); // 1 second max for Git version check
                                         $git = \app\models\Sysinfo::getGitVersion();
+                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Git version check completed\n", FILE_APPEND | LOCK_EX);
                                         echo (is_null($git)) ? '<span class="text-red">' . \Yii::t('app', 'not found') . '</span>' : htmlspecialchars($git);
                                     } catch (\Throwable $e) {
+                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Git version check ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
+                                        error_log("=== about.php: Git version check ERROR: " . $e->getMessage());
                                         echo '<span class="text-yellow">N/A (timeout or error)</span>';
                                     }
+                                    error_log("=== about.php: After Git version check ===");
+                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Git version check\n", FILE_APPEND | LOCK_EX);
                                 ?>
                             </td>
                         </tr>
-                    <?php if(!empty($plugins)): ?>
+                    <?php 
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before plugins check, plugins count: " . (is_array($plugins) ? count($plugins) : 'N/A') . "\n", FILE_APPEND | LOCK_EX);
+                        error_log("=== about.php: Before plugins check ===");
+                        if(!empty($plugins)): 
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Plugins section starting\n", FILE_APPEND | LOCK_EX);
+                            error_log("=== about.php: Plugins section starting ===");
+                    ?>
                         </tbody>
                         <thead>
                         <tr>
@@ -314,13 +334,20 @@ error_log("=== about.php: Before HTML start ===");
                         </tr>
                         </thead>
                         <tbody>
-                        <?php foreach ($plugins as $plugin): ?>
+                        <?php 
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before plugins foreach loop\n", FILE_APPEND | LOCK_EX);
+                            error_log("=== about.php: Before plugins foreach loop ===");
+                            $pluginIndex = 0;
+                            foreach ($plugins as $plugin): 
+                                $pluginIndex++;
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Processing plugin #{$pluginIndex}: " . (isset($plugin->name) ? $plugin->name : 'unknown') . "\n", FILE_APPEND | LOCK_EX);
+                        ?>
                             <tr>
-                                <td><?= $plugin->name ?></td>
-                                <td><?= $plugin->description ?></td>
+                                <td><?= isset($plugin->name) ? htmlspecialchars($plugin->name) : 'N/A' ?></td>
+                                <td><?= isset($plugin->description) ? htmlspecialchars($plugin->description) : '' ?></td>
                                 <td class="narrow">
                                     <?php
-                                        if($plugin->enabled) {
+                                        if(isset($plugin->enabled) && $plugin->enabled) {
                                             echo Html::tag('span', Yii::t('app', 'Yes'), ['class' => 'label pull-right bg-green']);
                                         } else {
                                             echo Html::tag('span', Yii::t('app', 'No'), ['class' => 'label pull-right bg-red']);
@@ -328,8 +355,19 @@ error_log("=== about.php: Before HTML start ===");
                                     ?>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                        <?php 
+                            endforeach; 
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After plugins foreach loop, processed {$pluginIndex} plugins\n", FILE_APPEND | LOCK_EX);
+                            error_log("=== about.php: After plugins foreach loop ===");
+                        ?>
+                    <?php 
+                        else:
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Plugins section skipped (empty)\n", FILE_APPEND | LOCK_EX);
+                            error_log("=== about.php: Plugins section skipped (empty) ===");
+                        endif; 
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After plugins section\n", FILE_APPEND | LOCK_EX);
+                        error_log("=== about.php: After plugins section ===");
+                    ?>
                         </tbody>
                     </table>
                 </div>
