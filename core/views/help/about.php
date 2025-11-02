@@ -27,7 +27,6 @@ use yii\helpers\Html;
  * @var $extensions   array
  * @var $plugins      \app\models\Plugin[]
  */
-// CRITICAL: Wrap breadcrumbs and title in try-catch to prevent any DB queries
 // These might trigger asset loading or other operations that query DB
 try {
     if (isset($this) && is_object($this)) {
@@ -43,16 +42,7 @@ try {
     // Ignore errors setting breadcrumbs/title - they're not critical
 }
 
-// Log template execution start - using direct file write to avoid any Yii2 operations
-@file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " === about.php template START ===\n", FILE_APPEND | LOCK_EX);
-error_log("=== about.php template START ===");
 
-// CRITICAL: DO NOT access Yii::$app here - it may trigger DB queries
-// Schema cache is already disabled in controller
-// Just proceed to HTML output immediately
-
-@file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before HTML start\n", FILE_APPEND | LOCK_EX);
-error_log("=== about.php: Before HTML start ===");
 ?>
 <div class="row">
     <div class="col-md-12">
@@ -60,25 +50,17 @@ error_log("=== about.php: Before HTML start ===");
             <ul class="nav nav-tabs">
                 <li class="active">
                     <a href="#tab_1" data-toggle="tab"><?php 
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before first Yii::t() call\n", FILE_APPEND | LOCK_EX);
-                        error_log("=== about.php: Before Yii::t('app', 'System') ===");
                         try {
                             $systemText = Yii::t('app', 'System');
-                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Yii::t('app', 'System') returned: " . substr($systemText, 0, 20) . "\n", FILE_APPEND | LOCK_EX);
                             echo htmlspecialchars($systemText); 
                         } catch (\Throwable $e) {
-                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Yii::t() ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
                             echo 'System'; // Fallback
                         }
-                        error_log("=== about.php: After Yii::t('app', 'System') ===");
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After first Yii::t() call\n", FILE_APPEND | LOCK_EX);
                     ?></a>
                 </li>
                 <li>
                     <a href="#tab_2" data-toggle="tab"><?php 
-                        error_log("=== about.php: Before Yii::t('app', 'Diagnostics') ===");
                         echo htmlspecialchars(Yii::t('app', 'Diagnostics')); 
-                        error_log("=== about.php: After Yii::t('app', 'Diagnostics') ===");
                     ?></a>
                 </li>
                 <li>
@@ -89,9 +71,7 @@ error_log("=== about.php: Before HTML start ===");
                 </li>
                 <li>
                     <a href="#tab_5" data-toggle="tab"><?php 
-                        error_log("=== about.php: Before Yii::t('help', 'Licenses') ===");
                         echo htmlspecialchars(Yii::t('help', 'Licenses')); 
-                        error_log("=== about.php: After Yii::t('help', 'Licenses') ===");
                     ?></a>
                 </li>
                 <li class="dropdown pull-right tabdrop">
@@ -99,53 +79,31 @@ error_log("=== about.php: Before HTML start ===");
                     <ul class="dropdown-menu">
                         <li>
                             <a href="https://github.com/cBackup/main/issues" target="_blank"><?php 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::t('help', 'Submit issue')\n", FILE_APPEND | LOCK_EX);
                                 echo htmlspecialchars(Yii::t('help', 'Submit issue')); 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::t('help', 'Submit issue')\n", FILE_APPEND | LOCK_EX);
                             ?></a>
                         </li>
                         <li>
                             <a href="<?php 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Url::to(['/help/support'])\n", FILE_APPEND | LOCK_EX);
-                                error_log("=== about.php: Before Url::to(['/help/support']) ===");
                                 try {
-                                    // CRITICAL: Url::to() may trigger DB queries through urlManager
                                     $supportUrl = \yii\helpers\Url::to(['/help/support']);
-                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Url::to() returned: " . $supportUrl . "\n", FILE_APPEND | LOCK_EX);
                                     echo htmlspecialchars($supportUrl);
                                 } catch (\Throwable $e) {
-                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Url::to() ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
-                                    error_log("=== about.php: Url::to() ERROR: " . $e->getMessage());
                                     echo '/help/support'; // Fallback
                                 }
-                                error_log("=== about.php: After Url::to(['/help/support']) ===");
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Url::to(['/help/support'])\n", FILE_APPEND | LOCK_EX);
                             ?>"><?php 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::t('help', 'Create support bundle')\n", FILE_APPEND | LOCK_EX);
                                 echo htmlspecialchars(Yii::t('help', 'Create support bundle')); 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::t('help', 'Create support bundle')\n", FILE_APPEND | LOCK_EX);
                             ?></a>
                         </li>
                     </ul>
                 </li>
             </ul>
-            <?php 
-                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before tab-content div\n", FILE_APPEND | LOCK_EX);
-                error_log("=== about.php: Before tab-content div ===");
-            ?>
             <div class="tab-content">
                 <div class="tab-pane fade active in" id="tab_1">
-                    <?php 
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before table with Generic info\n", FILE_APPEND | LOCK_EX);
-                        error_log("=== about.php: Before table with Generic info ===");
-                    ?>
                     <table class="table table-hover">
                         <thead>
                         <tr>
                             <th colspan="3" class="bg-info"><?php 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::t('app', 'Generic info')\n", FILE_APPEND | LOCK_EX);
                                 echo htmlspecialchars(Yii::t('app', 'Generic info')); 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::t('app', 'Generic info')\n", FILE_APPEND | LOCK_EX);
                             ?></th>
                         </tr>
                         <tr>
@@ -157,20 +115,12 @@ error_log("=== about.php: Before HTML start ===");
                         <tr>
                             <td><?= Yii::t('app', 'cBackup version') ?></td>
                             <td colspan="2"><?php 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::\$app->version\n", FILE_APPEND | LOCK_EX);
-                                error_log("=== about.php: Before Yii::\$app->version ===");
                                 try {
-                                    // CRITICAL: Accessing Yii::$app->version may trigger component initialization
                                     $version = Yii::$app->version;
-                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Yii::\$app->version = " . substr($version, 0, 20) . "\n", FILE_APPEND | LOCK_EX);
                                     echo htmlspecialchars($version);
                                 } catch (\Throwable $e) {
-                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Yii::\$app->version ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
-                                    error_log("=== about.php: Yii::\$app->version ERROR: " . $e->getMessage());
                                     echo 'N/A';
                                 }
-                                error_log("=== about.php: After Yii::\$app->version ===");
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::\$app->version\n", FILE_APPEND | LOCK_EX);
                             ?></td>
                         </tr>
                         <tr>
@@ -197,9 +147,7 @@ error_log("=== about.php: Before HTML start ===");
                         <tr>
                             <td><?= Yii::t('help', 'Framework') ?></td>
                             <td colspan="2">Yii <?php 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::getVersion()\n", FILE_APPEND | LOCK_EX);
                                 echo Yii::getVersion(); 
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::getVersion()\n", FILE_APPEND | LOCK_EX);
                             ?></td>
                         </tr>
                         <tr>
@@ -213,11 +161,8 @@ error_log("=== about.php: Before HTML start ===");
                         <tr>
                             <td><?= Yii::t('help', 'Database client version') ?></td>
                             <td colspan="2"><?php
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Database client version check\n", FILE_APPEND | LOCK_EX);
-                                error_log("=== about.php: Before Database client version check ===");
                                 // Safe version - don't call mysqli functions if DB connection is closed
                                 try {
-                                    // CRITICAL: Accessing Yii::$app->db may trigger DB queries
                                     // Use reflection to check without triggering __get
                                     $db = null;
                                     try {
@@ -234,19 +179,13 @@ error_log("=== about.php: Before HTML start ===");
                                     }
                                     
                                     if ($db !== null && $db->getIsActive()) {
-                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " DB is active, getting client info\n", FILE_APPEND | LOCK_EX);
                                         echo mysqli_get_client_info();
                                     } else {
-                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " DB not active or not available\n", FILE_APPEND | LOCK_EX);
                                         echo 'N/A (DB connection closed for security)';
                                     }
                                 } catch (\Throwable $e) {
-                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Database client version ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
-                                    error_log("=== about.php: Database client version ERROR: " . $e->getMessage());
                                     echo 'N/A';
                                 }
-                                error_log("=== about.php: After Database client version check ===");
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Database client version check\n", FILE_APPEND | LOCK_EX);
                             ?></td>
                         </tr>
                         <tr>
@@ -265,13 +204,10 @@ error_log("=== about.php: Before HTML start ===");
                             <td><?= Yii::t('help', 'Java version') ?></td>
                             <td colspan="2">
                                 <?php
-                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Java version check\n", FILE_APPEND | LOCK_EX);
-                                    error_log("=== about.php: Before Java version check ===");
                                     // Safe version - wrap in try-catch to prevent hanging
                                     try {
                                         @set_time_limit(1); // 1 second max for Java version check
                                         $java = \app\models\Sysinfo::getJavaVersion();
-                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Java version check completed\n", FILE_APPEND | LOCK_EX);
                                         if (is_null($java)) {
                                             // Check if we're in Docker environment
                                             $isDocker = getenv('DOCKER_CONTAINER') === 'true' || getenv('container') === 'docker';
@@ -284,12 +220,8 @@ error_log("=== about.php: Before HTML start ===");
                                             echo htmlspecialchars($java);
                                         }
                                     } catch (\Throwable $e) {
-                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Java version check ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
-                                        error_log("=== about.php: Java version check ERROR: " . $e->getMessage());
                                         echo '<span class="text-yellow">N/A (timeout or error)</span>';
                                     }
-                                    error_log("=== about.php: After Java version check ===");
-                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Java version check\n", FILE_APPEND | LOCK_EX);
                                 ?>
                             </td>
                         </tr>
@@ -297,30 +229,19 @@ error_log("=== about.php: Before HTML start ===");
                             <td><?= Yii::t('help', 'Git version') ?></td>
                             <td colspan="2">
                                 <?php
-                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Git version check\n", FILE_APPEND | LOCK_EX);
-                                    error_log("=== about.php: Before Git version check ===");
                                     // Safe version - wrap in try-catch to prevent hanging
                                     try {
                                         @set_time_limit(1); // 1 second max for Git version check
                                         $git = \app\models\Sysinfo::getGitVersion();
-                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Git version check completed\n", FILE_APPEND | LOCK_EX);
                                         echo (is_null($git)) ? '<span class="text-red">' . \Yii::t('app', 'not found') . '</span>' : htmlspecialchars($git);
                                     } catch (\Throwable $e) {
-                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Git version check ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
-                                        error_log("=== about.php: Git version check ERROR: " . $e->getMessage());
                                         echo '<span class="text-yellow">N/A (timeout or error)</span>';
                                     }
-                                    error_log("=== about.php: After Git version check ===");
-                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Git version check\n", FILE_APPEND | LOCK_EX);
                                 ?>
                             </td>
                         </tr>
                     <?php 
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before plugins check, plugins count: " . (is_array($plugins) ? count($plugins) : 'N/A') . "\n", FILE_APPEND | LOCK_EX);
-                        error_log("=== about.php: Before plugins check ===");
                         if(!empty($plugins)): 
-                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Plugins section starting\n", FILE_APPEND | LOCK_EX);
-                            error_log("=== about.php: Plugins section starting ===");
                     ?>
                         </tbody>
                         <thead>
@@ -335,12 +256,9 @@ error_log("=== about.php: Before HTML start ===");
                         </thead>
                         <tbody>
                         <?php 
-                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before plugins foreach loop\n", FILE_APPEND | LOCK_EX);
-                            error_log("=== about.php: Before plugins foreach loop ===");
                             $pluginIndex = 0;
                             foreach ($plugins as $plugin): 
                                 $pluginIndex++;
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Processing plugin #{$pluginIndex}: " . (isset($plugin->name) ? $plugin->name : 'unknown') . "\n", FILE_APPEND | LOCK_EX);
                         ?>
                             <tr>
                                 <td><?= isset($plugin->name) ? htmlspecialchars($plugin->name) : 'N/A' ?></td>
@@ -357,28 +275,18 @@ error_log("=== about.php: Before HTML start ===");
                             </tr>
                         <?php 
                             endforeach; 
-                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After plugins foreach loop, processed {$pluginIndex} plugins\n", FILE_APPEND | LOCK_EX);
-                            error_log("=== about.php: After plugins foreach loop ===");
                         ?>
                     <?php 
                         else:
-                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Plugins section skipped (empty)\n", FILE_APPEND | LOCK_EX);
-                            error_log("=== about.php: Plugins section skipped (empty) ===");
                         endif; 
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After plugins section\n", FILE_APPEND | LOCK_EX);
-                        error_log("=== about.php: After plugins section ===");
                     ?>
                         </tbody>
                     </table>
                     <?php 
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Table tab_1 closed, before tab_2\n", FILE_APPEND | LOCK_EX);
-                        error_log("=== about.php: Table tab_1 closed, before tab_2 ===");
                     ?>
                 </div>
                 <div class="tab-pane fade in" id="tab_2">
                     <?php 
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Tab_2 started\n", FILE_APPEND | LOCK_EX);
-                        error_log("=== about.php: Tab_2 started ===");
                     ?>
                     <?php if( mb_stripos(PHP_OS, 'Linux') === false ) : ?>
                         <div class="alert alert-warning">
@@ -386,13 +294,9 @@ error_log("=== about.php: Before HTML start ===");
                         </div>
                     <?php endif; ?>
                     <?php 
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Install::checkWorldAccess() - SKIPPING for about page performance\n", FILE_APPEND | LOCK_EX);
-                        error_log("=== about.php: Install::checkWorldAccess() SKIPPED for performance ===");
-                        // CRITICAL: Skip Install::checkWorldAccess() on about page to prevent hanging
                         // This function makes HTTP request via cURL which can hang even with timeouts
                         // For about page, we'll just assume secure (false) - users can check this in diagnostics if needed
                         $worldAccess = false; // Default to secure (not accessible) - safe assumption
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Install::checkWorldAccess() skipped, using default: false\n", FILE_APPEND | LOCK_EX);
                     ?>
                     <?php if($worldAccess === true): ?>
                         <div class="alert alert-danger">
@@ -405,8 +309,6 @@ error_log("=== about.php: Before HTML start ===");
                         </div>
                     <?php endif; ?>
                     <?php 
-                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before permissions table, perms count: " . (is_array($perms) ? count($perms) : 'N/A') . "\n", FILE_APPEND | LOCK_EX);
-                        error_log("=== about.php: Before permissions table ===");
                     ?>
                     <table class="table">
                         <tr class="info text-bolder">
@@ -419,12 +321,9 @@ error_log("=== about.php: Before HTML start ===");
                             <th class="text-right">X</th>
                         </tr>
                         <?php 
-                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before perms foreach loop\n", FILE_APPEND | LOCK_EX);
-                            error_log("=== about.php: Before perms foreach loop ===");
                             $permIndex = 0;
                             foreach ($perms as $perm): 
                                 $permIndex++;
-                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Processing perm #{$permIndex}\n", FILE_APPEND | LOCK_EX);
                         ?>
                             <?php if(is_null($perm['path'])) continue; ?>
                             <tr>
