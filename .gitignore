@@ -1,5 +1,7 @@
 .env
 vendor/
+# Исключение: view файлы для модуля network/vendor должны быть в репозитории
+!core/modules/network/views/vendor/
 *.log
 *.cache
 runtime/
