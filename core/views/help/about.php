@@ -106,11 +106,11 @@ $this->title = Yii::t('app', 'About');
                         </tr>
                         <tr>
                             <td><?= Yii::t('help', 'Framework database driver') ?></td>
-                            <td colspan="2"><?= Yii::$app->db->driverName ?></td>
+                            <td colspan="2"><?= isset($dbDriverName) ? $dbDriverName : 'mysql' ?></td>
                         </tr>
                         <tr>
                             <td><?= Yii::t('help', 'Database server version') ?></td>
-                            <td colspan="2"><?= (new \yii\db\Query())->select('version()')->scalar(); ?></td>
+                            <td colspan="2"><?= isset($dbVersion) ? $dbVersion : 'N/A' ?></td>
                         </tr>
                         <tr>
                             <td><?= Yii::t('help', 'Database client version') ?></td>

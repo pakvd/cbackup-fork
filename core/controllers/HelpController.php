@@ -49,10 +49,16 @@ class HelpController extends Controller
         // This prevents infinite loops and hanging
         // Data generation should happen via separate background job or console command
         
-        // Set short timeout
-        @set_time_limit(5); // 5 seconds max - page must load quickly
+        // Set aggressive timeout and track execution time
+        $startTime = microtime(true);
+        @set_time_limit(3); // 3 seconds max - page must load very quickly
         
-        // Initialize with empty defaults
+        // Disable schema cache temporarily to prevent recursion issues
+        $originalSchemaCache = Yii::$app->db->enableSchemaCache;
+        Yii::$app->db->enableSchemaCache = false;
+        
+        try {
+            // Initialize with empty defaults
         $phpinfo = [];
         $plugins = [];
         $perms = [];
@@ -83,14 +89,79 @@ class HelpController extends Controller
             // Ignore
         }
 
-        // Render page immediately - even with empty data
-        return $this->render('about', [
-            'phpinfo'    => $phpinfo,
-            'SERVER'     => $_SERVER,
-            'perms'      => $perms,
-            'plugins'    => $plugins,
-            'extensions' => $extensions
-        ]);
+        // Cache database info to avoid schema loading during render
+        // These queries in the template can trigger schema loading which causes hanging
+        $dbInfo = Yii::$app->cache->get('help_about_db_info') ?: null;
+        if ($dbInfo === null) {
+            try {
+                // Try to get DB info, but with timeout protection
+                @set_time_limit(2);
+                $dbInfo = [
+                    'version' => (new \yii\db\Query())->select('version()')->scalar(),
+                    'driverName' => Yii::$app->db->driverName ?? 'mysql',
+                ];
+                Yii::$app->cache->set('help_about_db_info', $dbInfo, 3600); // Cache for 1 hour
+            } catch (\Throwable $e) {
+                $dbInfo = ['version' => 'Unknown', 'driverName' => 'mysql'];
+                Yii::$app->cache->set('help_about_db_info', $dbInfo, 60); // Cache error for 1 minute
+            }
+        }
+        
+        $dbVersion = $dbInfo['version'] ?? 'N/A';
+        $dbDriverName = $dbInfo['driverName'] ?? 'mysql';
+        
+        // Ensure plugins are simple objects/arrays, not ActiveRecord (to avoid schema loading)
+        $safePlugins = [];
+        if (!empty($plugins)) {
+            foreach ($plugins as $plugin) {
+                if (is_object($plugin)) {
+                    $safePlugins[] = (object)[
+                        'name' => $plugin->name ?? ($plugin->{'name'} ?? ''),
+                        'description' => $plugin->description ?? ($plugin->{'description'} ?? ''),
+                        'enabled' => $plugin->enabled ?? ($plugin->{'enabled'} ?? 0),
+                    ];
+                } elseif (is_array($plugin)) {
+                    $safePlugins[] = (object)[
+                        'name' => $plugin['name'] ?? '',
+                        'description' => $plugin['description'] ?? '',
+                        'enabled' => $plugin['enabled'] ?? 0,
+                    ];
+                }
+            }
+        }
+
+            // Check execution time - if taking too long, return early with minimal data
+            $elapsed = microtime(true) - $startTime;
+            if ($elapsed > 2.5) {
+                // Taking too long - return minimal page immediately
+                error_log("HelpController::actionAbout() taking too long: {$elapsed}s, returning minimal page");
+                return $this->render('about', [
+                    'phpinfo'      => [],
+                    'SERVER'       => $_SERVER,
+                    'perms'        => [],
+                    'plugins'      => [],
+                    'extensions'   => [],
+                    'dbVersion'    => 'N/A',
+                    'dbDriverName' => 'mysql',
+                ]);
+            }
+            
+            // Render page immediately - even with empty data
+            $result = $this->render('about', [
+                'phpinfo'      => $phpinfo,
+                'SERVER'       => $_SERVER,
+                'perms'        => $perms,
+                'plugins'      => $safePlugins,
+                'extensions'   => $extensions,
+                'dbVersion'    => $dbVersion,    // Pass cached version to avoid query in template
+                'dbDriverName' => $dbDriverName, // Pass cached driver name to avoid schema loading
+            ]);
+            
+            return $result;
+        } finally {
+            // Always restore schema cache setting
+            Yii::$app->db->enableSchemaCache = $originalSchemaCache;
+        }
 
     }
 
