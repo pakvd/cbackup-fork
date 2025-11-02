@@ -250,9 +250,36 @@ class ConfigController extends Controller
                     if ($result) {
                         $status  = 'success';
                         $message = Yii::t('config', 'application.properties synchronized successfully');
+                        
+                        // Clear cache to ensure changes are reflected
+                        Yii::$app->cache->delete('config_data');
+                        
+                        // Verify sync was successful by checking the file
+                        $file = Yii::$app->basePath.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'application.properties';
+                        if (file_exists($file)) {
+                            $props = @parse_ini_file($file, false, INI_SCANNER_RAW);
+                            if (!empty($props)) {
+                                // Check if all required keys are present
+                                $requiredKeys = ['sshd.shell.port', 'sshd.shell.username', 'sshd.shell.password'];
+                                $missingKeys = [];
+                                foreach ($requiredKeys as $key) {
+                                    if (!isset($props[$key])) {
+                                        $missingKeys[] = $key;
+                                    }
+                                }
+                                if (!empty($missingKeys)) {
+                                    $status = 'warning';
+                                    $message = Yii::t('config', 'File created but some keys are missing: {keys}', ['keys' => implode(', ', $missingKeys)]);
+                                }
+                            }
+                        }
                     } else {
                         $file = Yii::$app->basePath.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'application.properties';
-                        $message = Yii::t('config', 'Failed to synchronize. Check file permissions for: {file}', ['file' => $file]);
+                        $dir  = dirname($file);
+                        $message = Yii::t('config', 'Failed to synchronize. Directory writable: {dir}, File writable: {file}', [
+                            'dir' => is_writable($dir) ? 'yes' : 'no',
+                            'file' => file_exists($file) && is_writable($file) ? 'yes' : 'no'
+                        ]);
                     }
                 }
 

@@ -297,6 +297,9 @@ class Config extends ActiveRecord
                 $pkey  = "sshd.shell.$match";
 
                 if (!empty($match)) {
+                    // Ensure value is a string (handle null and empty values)
+                    $value = ($value === null || $value === '') ? '' : (string)$value;
+                    
                     // Escape special regex characters in the property key
                     $escapedPkey = preg_quote($pkey, '/');
                     
@@ -305,11 +308,19 @@ class Config extends ActiveRecord
                         // Property exists, replace it
                         $content = preg_replace("/^{$escapedPkey}=.*$/im", "{$pkey}={$value}", $content);
                     } else {
-                        // Property doesn't exist, add it before the first comment or at the end
-                        if (preg_match("/^# SSH Daemon Shell Configuration/im", $content)) {
-                            $content = preg_replace("/^(# SSH Daemon Shell Configuration)/im", "$1\n{$pkey}={$value}", $content);
+                        // Property doesn't exist, add it after SSH Daemon Shell Configuration section
+                        if (preg_match("/^(# SSH Daemon Shell Configuration[^\n]*\n)/im", $content, $headerMatch)) {
+                            // Add after the header line
+                            $content = preg_replace("/^(# SSH Daemon Shell Configuration[^\n]*\n)/im", "$1{$pkey}={$value}\n", $content);
+                        } elseif (preg_match("/^(sshd\.shell\.\w+=.*\n)/im", $content, $lastProp)) {
+                            // Add after the last sshd.shell property
+                            $content = preg_replace("/^(sshd\.shell\.\w+=.*\n)/im", "$1{$pkey}={$value}\n", $content, -1);
                         } else {
-                            $content .= "\n{$pkey}={$value}";
+                            // Add at the beginning of SSH section or at the end
+                            $content = preg_replace("/^(# SSH Daemon Shell Configuration)/im", "$1\n{$pkey}={$value}", $content, 1);
+                            if (!preg_match("/{$pkey}={$value}/", $content)) {
+                                $content .= "\n{$pkey}={$value}";
+                            }
                         }
                     }
                 }
@@ -317,8 +328,21 @@ class Config extends ActiveRecord
         }
 
         // Write the updated content
-        if (is_writable($dir) || (file_exists($file) && is_writable($file))) {
-            return file_put_contents($file, $content) !== false;
+        // Check if directory is writable
+        if (!is_writable($dir) && !is_dir($dir)) {
+            // Try to create directory
+            if (!@mkdir($dir, 0755, true)) {
+                return false;
+            }
+        }
+        
+        // Try to write file
+        $result = @file_put_contents($file, $content);
+        
+        if ($result !== false) {
+            // Make sure file has correct permissions
+            @chmod($file, 0644);
+            return true;
         }
 
         return false;
@@ -392,10 +416,14 @@ class Config extends ActiveRecord
                 $pkey  = "sshd.shell.$match";
 
                 if (!empty($match)) {
+                    // Normalize values for comparison (both as strings)
+                    $propValue = isset($props[$pkey]) ? (string)$props[$pkey] : '';
+                    $dbValue = ($value === null || $value === '') ? '' : (string)$value;
+                    
                     // Check if property exists in file
                     if (array_key_exists($pkey, $props)) {
                         // Property exists, check if value matches
-                        if ($props[$pkey] != $value) {
+                        if ($propValue !== $dbValue) {
                             $res[] = $pkey;
                         }
                     } else {
@@ -422,8 +450,12 @@ class Config extends ActiveRecord
                             $match = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
                             $pkey  = "sshd.shell.$match";
                             if (!empty($match)) {
+                                // Normalize values for comparison (both as strings)
+                                $propValue = isset($props[$pkey]) ? (string)$props[$pkey] : '';
+                                $dbValue = ($value === null || $value === '') ? '' : (string)$value;
+                                
                                 if (array_key_exists($pkey, $props)) {
-                                    if ($props[$pkey] != $value) {
+                                    if ($propValue !== $dbValue) {
                                         $res[] = $pkey;
                                     }
                                 } else {

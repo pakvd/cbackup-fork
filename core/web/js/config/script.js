@@ -118,21 +118,24 @@ $(document).on('ready pjax:end', function() {
                 btn_lock.start();
             },
             success: function (data) {
-                var response = isJson(data) ? JSON.parse(data) : {status: 'error', msg: data};
                 if (isJson(data)) {
-                    showStatus(response);
-                    // Reload page after successful sync to clear warning
-                    if (btn_id === 'sync_properties' && response.status === 'success') {
-                        setTimeout(function() {
-                            $.pjax.reload({container: '#config-pjax', url: $(location).attr('href'), timeout: 10000});
-                        }, 1500);
+                    showStatus(data);
+                    // For sync_properties, check if sync was successful and reload page
+                    if (btn_id === 'sync_properties') {
+                        var response = JSON.parse(data);
+                        if (response.status === 'success') {
+                            // Reload page after successful sync to clear warning
+                            setTimeout(function() {
+                                $.pjax.reload({container: '#config-pjax', url: $(location).attr('href'), timeout: 10000});
+                            }, 1500);
+                        }
                     }
                 } else {
                     toastr.warning(data, '', {timeOut: 0, closeButton: true});
                 }
             },
             error: function (data) {
-                toastr.error(data.responseText, '', {timeOut: 0, closeButton: true});
+                toastr.error(data.responseText || 'Ошибка при выполнении запроса', '', {timeOut: 0, closeButton: true});
             }
         }).always(function(){
             btn_lock.stop();
