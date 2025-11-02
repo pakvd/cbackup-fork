@@ -346,6 +346,8 @@ class Install extends Model
                       CURLOPT_NOBODY           => true,
                       CURLOPT_SSL_VERIFYHOST   => false,
                       CURLOPT_SSL_VERIFYPEER   => false,
+                      CURLOPT_TIMEOUT          => 2, // 2 seconds timeout to prevent hanging
+                      CURLOPT_CONNECTTIMEOUT   => 2, // 2 seconds connection timeout
                   ]);
                   if(version_compare(PHP_VERSION, '7.0.7') >= 0 && version_compare($curl['version'], '7.41.0') >= 0) {
                       curl_setopt($ch, CURLOPT_SSL_VERIFYSTATUS, false);

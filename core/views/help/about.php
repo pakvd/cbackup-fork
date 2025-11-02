@@ -388,17 +388,26 @@ error_log("=== about.php: Before HTML start ===");
                     <?php 
                         @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Install::checkWorldAccess()\n", FILE_APPEND | LOCK_EX);
                         error_log("=== about.php: Before Install::checkWorldAccess() ===");
+                        $worldAccess = false; // Default to false (secure)
                         try {
+                            // CRITICAL: Install::checkWorldAccess() makes HTTP request via cURL
+                            // Function now has timeout, but add extra safety
+                            @set_time_limit(3); // 3 seconds max (function timeout is 2s)
+                            $startTime = microtime(true);
+                            
                             $worldAccess = \app\models\Install::checkWorldAccess();
-                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Install::checkWorldAccess() returned: " . ($worldAccess ? 'true' : 'false') . "\n", FILE_APPEND | LOCK_EX);
+                            
+                            $elapsed = microtime(true) - $startTime;
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Install::checkWorldAccess() returned: " . ($worldAccess === true ? 'true' : ($worldAccess === false ? 'false' : 'null')) . " in " . round($elapsed, 3) . "s\n", FILE_APPEND | LOCK_EX);
                         } catch (\Throwable $e) {
                             @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Install::checkWorldAccess() ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
                             error_log("=== about.php: Install::checkWorldAccess() ERROR: " . $e->getMessage());
-                            $worldAccess = false;
+                            $worldAccess = false; // Default to secure
                         }
                         error_log("=== about.php: After Install::checkWorldAccess() ===");
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Install::checkWorldAccess()\n", FILE_APPEND | LOCK_EX);
                     ?>
-                    <?php if($worldAccess ?? false): ?>
+                    <?php if($worldAccess === true): ?>
                         <div class="alert alert-danger">
                             <p>
                                 <?php
