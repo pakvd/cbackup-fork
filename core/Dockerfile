@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     default-mysql-client \
     && docker-php-ext-install pdo_mysql mysqli mbstring exif pcntl bcmath gmp zip snmp intl \
-    && pecl install ssh2-1.3.1 \
-    && docker-php-ext-enable ssh2 \
+    && pecl install ssh2-1.3.1 redis \
+    && docker-php-ext-enable ssh2 redis \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer

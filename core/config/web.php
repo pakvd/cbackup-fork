@@ -68,8 +68,21 @@ $config = [
                 ],
             ],
         ],
+        // Redis connection component (only if Redis is available)
+        // Must be defined before 'cache' component if Redis cache is used
+        'redis' => extension_loaded('redis') && getenv('REDIS_HOST') ? [
+            'class' => 'yii\redis\Connection',
+            'hostname' => getenv('REDIS_HOST') ?: 'redis',
+            'port' => (int)(getenv('REDIS_PORT') ?: 6379),
+            'database' => 0,
+            'retries' => 1,
+            'socketTimeout' => 2,
+        ] : null,
         'cache' => [
-            'class' => 'yii\caching\FileCache',
+            // Use Redis if available, fallback to FileCache
+            'class' => (extension_loaded('redis') && getenv('REDIS_HOST')) 
+                ? 'yii\redis\Cache' 
+                : 'yii\caching\FileCache',
         ],
         'user' => [
             'identityClass'   => 'app\models\User',

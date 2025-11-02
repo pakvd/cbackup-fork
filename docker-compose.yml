@@ -36,6 +36,8 @@ services:
       DB_NAME: ${MYSQL_DATABASE:-cbackup}
       DB_USER: ${MYSQL_USER:-cbackup}
       DB_PASSWORD: ${MYSQL_PASSWORD:-cbackup_password}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       PHP_TIMEZONE: ${PHP_TIMEZONE:-UTC}
       ENABLE_OPCACHE: ${ENABLE_OPCACHE:-true}
       DOCKER_CONTAINER: "true"
@@ -45,6 +47,8 @@ services:
       - web_runtime:/var/www/html/runtime
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - cbackup_network
@@ -65,6 +69,22 @@ services:
       - web
     networks:
       - cbackup_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: cbackup_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - cbackup_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   # Java Worker
   worker:
@@ -92,6 +112,8 @@ volumes:
   web_runtime:
     driver: local
   web_assets:
+    driver: local
+  redis_data:
     driver: local
 
 networks:
