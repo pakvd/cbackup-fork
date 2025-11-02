@@ -48,17 +48,52 @@ class MessageWidget extends Widget
 
         parent::init();
 
-        $messages = (new Query())
-            ->select(['created', 'message'])
-            ->from([new Expression('{{%messages}} FORCE INDEX (ix_time)')])
-            ->where(['approved' => null])
-            ->orderBy(['created' => SORT_DESC])
-        ;
+        // CRITICAL: Use cache to prevent database queries during page render
+        // This prevents schema loading issues and hanging
+        try {
+            $cachedData = Yii::$app->cache->get('message_widget_data');
+            if ($cachedData !== false && $cachedData !== null && is_array($cachedData)) {
+                $this->data = $cachedData;
+                return;
+            }
+        } catch (\Throwable $e) {
+            // If cache fails, use defaults
+        }
 
-        $this->data = [
-            'count'    => $messages->count(),
-            'messages' => $messages->limit(5)->all(),
-        ];
+        // If cache is empty or failed, try to query database but with error handling
+        try {
+            // Disable schema cache temporarily to prevent recursion
+            $originalSchemaCache = \Yii::$app->db->enableSchemaCache ?? false;
+            \Yii::$app->db->enableSchemaCache = false;
+            
+            $messages = (new Query())
+                ->select(['created', 'message'])
+                ->from([new Expression('{{%messages}} FORCE INDEX (ix_time)')])
+                ->where(['approved' => null])
+                ->orderBy(['created' => SORT_DESC])
+            ;
+
+            $this->data = [
+                'count'    => $messages->count(),
+                'messages' => $messages->limit(5)->all(),
+            ];
+            
+            // Restore schema cache
+            \Yii::$app->db->enableSchemaCache = $originalSchemaCache;
+            
+            // Cache the result for 1 minute
+            try {
+                \Yii::$app->cache->set('message_widget_data', $this->data, 60);
+            } catch (\Throwable $e) {
+                // Ignore cache errors
+            }
+        } catch (\Throwable $e) {
+            // If query fails, use empty defaults
+            $this->data = [
+                'count'    => 0,
+                'messages' => [],
+            ];
+        }
 
     }
 

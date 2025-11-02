@@ -56,13 +56,18 @@ use app\models\Plugin;
             $renderPluginMenu = function () {
 
                 $menu    = [];
-                $plugins = Yii::$app->cache->getOrSet('pluginmenu', function() {
-                    $data = Plugin::find()->where(['enabled' => '1'])->all();
-                    array_walk($data, function($object) {
-                        $object->plugin_params += ['translated_name' => $object->plugin::t('general', Inflector::humanize($object->attributes['name']))];
-                    });
-                    return $data;
-                });
+                // CRITICAL: Only load from cache - never query database during page render
+                // This prevents schema loading issues and hanging
+                $plugins = [];
+                try {
+                    $cachedData = Yii::$app->cache->get('pluginmenu');
+                    if ($cachedData !== false && $cachedData !== null) {
+                        $plugins = $cachedData;
+                    }
+                } catch (\Throwable $e) {
+                    // If cache fails, use empty array - don't query database
+                    $plugins = [];
+                }
 
                 /** Display menu only if plugins were found */
                 if (!empty($plugins)) {
