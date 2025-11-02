@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Using composer:2.8 for stability (latest is 2.8.12 as of Nov 2025)
+COPY --from=composer:2.8 /usr/bin/composer /usr/bin/composer
 
 # Set working directory
 WORKDIR /var/www/html

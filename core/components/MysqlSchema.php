@@ -57,40 +57,90 @@ class MysqlSchema extends BaseSchema
                 return $table;
             }
             
-            // If parent returned null, check if table actually exists
-            // If it exists but schema loading failed, it's likely due to constraint_name error
-            if ($constraintNameError) {
-                // Check if table exists
-                try {
-                    $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
-                    $tableExists = $this->db->createCommand()
-                        ->select('COUNT(*)')
-                        ->from('information_schema.tables')
-                        ->where([
-                            'table_schema' => $dbName,
-                            'table_name' => $name
-                        ])
-                        ->queryScalar() > 0;
+            // If parent returned null, ALWAYS check if table actually exists
+            // This is crucial because parent may return null due to constraint_name errors
+            // even when the table exists
+            try {
+                $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
+                $tableExists = $this->db->createCommand()
+                    ->select('COUNT(*)')
+                    ->from('information_schema.tables')
+                    ->where([
+                        'table_schema' => $dbName,
+                        'table_name' => $name
+                    ])
+                    ->queryScalar() > 0;
+                
+                if ($tableExists) {
+                    // Clear schema cache for this table if enabled, as it may contain incorrect null value
+                    try {
+                        if ($this->db->enableSchemaCache && $this->db->schemaCache !== null) {
+                            $cache = is_string($this->db->schemaCache) ? \Yii::$app->get($this->db->schemaCache) : $this->db->schemaCache;
+                            if ($cache instanceof \yii\caching\Cache) {
+                                $cacheKey = $this->getCacheKey('table:' . $name);
+                                $cache->delete($cacheKey);
+                            }
+                        }
+                    } catch (\Throwable $cacheEx) {
+                        // Ignore cache clearing errors
+                    }
                     
-                    if ($tableExists) {
-                        // Table exists but schema loading failed - try again with full error suppression
-                        set_error_handler(function() { return true; }, E_ALL);
+                    // Table exists but schema loading failed - try again with full error suppression
+                    set_error_handler(function() { return true; }, E_ALL);
+                    try {
                         $table = parent::loadTableSchema($name);
-                        restore_error_handler();
-                        
-                        if ($table !== null) {
+                    } catch (\Throwable $e) {
+                        $table = null;
+                    }
+                    restore_error_handler();
+                    
+                    if ($table !== null) {
+                        // Load foreign keys safely
+                        try {
+                            $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
+                        } catch (\Exception $fkEx) {
+                            $table->foreignKeys = [];
+                        }
+                        return $table;
+                    } else {
+                        // Table exists but we can't load schema - try to load columns manually
+                        // This ensures we return a valid TableSchema even if parent fails
+                        try {
+                            $table = new TableSchema();
+                            $table->fullName = $name;
+                            $table->name = $name;
+                            $table->foreignKeys = [];
+                            
+                            // Try to load columns manually
+                            $columns = $this->db->createCommand("SHOW COLUMNS FROM `{$name}`")->queryAll();
+                            foreach ($columns as $column) {
+                                $col = $this->loadColumnSchema($column);
+                                if ($col !== null) {
+                                    $table->columns[$col->name] = $col;
+                                }
+                            }
+                            
                             // Load foreign keys safely
                             try {
                                 $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
                             } catch (\Exception $fkEx) {
                                 $table->foreignKeys = [];
                             }
+                            
+                            return $table;
+                        } catch (\Throwable $manualEx) {
+                            // If manual loading also fails, return minimal schema
+                            $table = new TableSchema();
+                            $table->fullName = $name;
+                            $table->name = $name;
+                            $table->foreignKeys = [];
                             return $table;
                         }
                     }
-                } catch (\Throwable $checkEx) {
-                    // Ignore check errors
                 }
+            } catch (\Throwable $checkEx) {
+                // If check fails, continue to return null
+                // This means we couldn't verify if table exists
             }
             
             // Table doesn't exist or we can't load it
