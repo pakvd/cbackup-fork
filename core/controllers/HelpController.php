@@ -202,78 +202,21 @@ class HelpController extends Controller
             try {
                 error_log("Step 19.2: Calling render() method");
                 
-                // CRITICAL: Disable layout to prevent DB queries in sidebar/header
-                // Save original layout and restore after render
-                $originalLayout = $this->layout;
-                $this->layout = false; // No layout = no sidebar/header = no DB queries
-                error_log("Step 19.3: Layout disabled");
+                // Layout is needed for styles and structure
+                // Sidebar and header are already fixed to not query DB on about page
+                error_log("Step 19.3: Rendering with layout (sidebar/header fixed)");
                 
-                // Also disable DB connection completely during render
-                $originalDbEnabled = isset($app->db) ? $app->db->getIsActive() : false;
-                if (isset($app->db)) {
-                    try {
-                        $app->db->close();
-                        error_log("Step 19.3.1: DB connection closed");
-                    } catch (\Throwable $e) {
-                        error_log("Step 19.3.1: DB close error (ignored): " . $e->getMessage());
-                    }
-                }
-                
-                error_log("Step 19.4: Starting renderPartial");
-                
-                // Try to render with error suppression and timeout
-                try {
-                    // Set very short timeout for render
-                    @set_time_limit(1);
-                    
-                    // Wrap renderPartial in output buffering to catch any output
-                    ob_start();
-                    $renderError = null;
-                    
-                    // Use file_get_contents to read template and render manually
-                    // This bypasses Yii's render system which might trigger DB queries
-                    $viewFile = $this->getViewPath() . '/about.php';
-                    error_log("Step 19.4.1: View file: " . $viewFile);
-                    
-                    if (file_exists($viewFile)) {
-                        error_log("Step 19.4.2: View file exists, extracting content");
-                        // Instead of full render, just return simple HTML
-                        $result = '<div class="container"><h1>About cBackup</h1><p>System information page (simplified view)</p></div>';
-                        error_log("Step 19.4.3: Simple HTML generated");
-                    } else {
-                        error_log("Step 19.4.2: View file NOT found");
-                        $result = $this->renderPartial('about', [
-                            'phpinfo'      => $phpinfo,
-                            'SERVER'       => $_SERVER,
-                            'perms'        => $perms,
-                            'plugins'      => $safePlugins,
-                            'extensions'   => $extensions,
-                            'dbVersion'    => $dbVersion,
-                            'dbDriverName' => $dbDriverName,
-                        ], false);
-                    }
-                    ob_end_clean();
-                    error_log("Step 19.5: renderPartial completed");
-                } catch (\Throwable $renderEx) {
-                    error_log("Step 19.5 ERROR: " . $renderEx->getMessage() . " in " . $renderEx->getFile() . ":" . $renderEx->getLine());
-                    ob_end_clean();
-                    // Return minimal HTML on error
-                    $result = '<div class="container"><h1>About cBackup</h1><p>Error rendering page</p></div>';
-                }
-                
-                // Restore DB connection if needed
-                if (isset($app->db) && $originalDbEnabled) {
-                    try {
-                        $app->db->open();
-                        error_log("Step 19.5.1: DB connection reopened");
-                    } catch (\Throwable $e) {
-                        error_log("Step 19.5.1: DB open error (ignored): " . $e->getMessage());
-                    }
-                }
-                
-                // Restore layout
-                $this->layout = $originalLayout;
-                error_log("Step 19.6: Layout restored");
+                // Render with layout - sidebar/header won't query DB because we fixed them
+                $result = $this->render('about', [
+                    'phpinfo'      => $phpinfo,
+                    'SERVER'       => $_SERVER,
+                    'perms'        => $perms,
+                    'plugins'      => $safePlugins,
+                    'extensions'   => $extensions,
+                    'dbVersion'    => $dbVersion,
+                    'dbDriverName' => $dbDriverName,
+                ]);
+                error_log("Step 19.4: Render completed");
                 
                 $renderCompleted = true;
                 $renderElapsed = microtime(true) - $renderStart;

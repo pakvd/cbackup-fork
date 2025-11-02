@@ -114,7 +114,18 @@ $this->title = Yii::t('app', 'About');
                         </tr>
                         <tr>
                             <td><?= Yii::t('help', 'Database client version') ?></td>
-                            <td colspan="2"><?= mysqli_get_client_info() ?></td>
+                            <td colspan="2"><?php
+                                // Safe version - don't call mysqli functions if DB connection is closed
+                                try {
+                                    if (isset(Yii::$app->db) && Yii::$app->db->getIsActive()) {
+                                        echo mysqli_get_client_info();
+                                    } else {
+                                        echo 'N/A (DB connection closed for security)';
+                                    }
+                                } catch (\Throwable $e) {
+                                    echo 'N/A';
+                                }
+                            ?></td>
                         </tr>
                         <tr>
                             <td><?= Yii::t('help', 'PHP version') ?></td>
