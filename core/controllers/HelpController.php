@@ -221,10 +221,26 @@ class HelpController extends Controller
                 
                 // Render content by directly including the view file
                 // This bypasses Yii2's renderPartial which might trigger DB queries
-                $viewFile = $this->getViewPath() . DIRECTORY_SEPARATOR . 'help' . DIRECTORY_SEPARATOR . 'about.php';
-                error_log("Step 19.3.1: View file: " . $viewFile);
+                // Try multiple possible paths
+                $viewPath = $this->getViewPath();
+                $possiblePaths = [
+                    $viewPath . DIRECTORY_SEPARATOR . 'about.php',
+                    dirname($viewPath) . DIRECTORY_SEPARATOR . 'help' . DIRECTORY_SEPARATOR . 'about.php',
+                    \Yii::getAlias('@app') . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'help' . DIRECTORY_SEPARATOR . 'about.php',
+                ];
                 
-                if (file_exists($viewFile)) {
+                $viewFile = null;
+                foreach ($possiblePaths as $path) {
+                    if (file_exists($path)) {
+                        $viewFile = $path;
+                        break;
+                    }
+                }
+                
+                error_log("Step 19.3.1: View path from getViewPath(): " . $viewPath);
+                error_log("Step 19.3.1: Found view file: " . ($viewFile ?: 'NOT FOUND'));
+                
+                if ($viewFile && file_exists($viewFile)) {
                     error_log("Step 19.3.2: View file exists, starting output buffering");
                     ob_start();
                     try {
