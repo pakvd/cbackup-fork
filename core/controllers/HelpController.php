@@ -90,21 +90,12 @@ class HelpController extends Controller
         }
 
         // Cache database info to avoid schema loading during render
-        // These queries in the template can trigger schema loading which causes hanging
+        // CRITICAL: Only load from cache, never query database
         $dbInfo = Yii::$app->cache->get('help_about_db_info') ?: null;
         if ($dbInfo === null) {
-            try {
-                // Try to get DB info, but with timeout protection
-                @set_time_limit(2);
-                $dbInfo = [
-                    'version' => (new \yii\db\Query())->select('version()')->scalar(),
-                    'driverName' => Yii::$app->db->driverName ?? 'mysql',
-                ];
-                Yii::$app->cache->set('help_about_db_info', $dbInfo, 3600); // Cache for 1 hour
-            } catch (\Throwable $e) {
-                $dbInfo = ['version' => 'Unknown', 'driverName' => 'mysql'];
-                Yii::$app->cache->set('help_about_db_info', $dbInfo, 60); // Cache error for 1 minute
-            }
+            // If cache is empty, use defaults - do NOT query database
+            // Database info will be cached by a background process or on first successful access
+            $dbInfo = ['version' => 'N/A', 'driverName' => 'mysql'];
         }
         
         $dbVersion = $dbInfo['version'] ?? 'N/A';

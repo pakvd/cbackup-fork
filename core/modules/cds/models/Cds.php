@@ -229,20 +229,40 @@ class Cds extends Model
         /** DirectoryIterator init */
         // Use SKIP_DOTS and catch exceptions for permission errors
         try {
-            $rdi = new \RecursiveDirectoryIterator($this->content_dir, \RecursiveDirectoryIterator::SKIP_DOTS | \RecursiveDirectoryIterator::CURRENT_AS_SELF);
-            $it  = new \RecursiveIteratorIterator($rdi, \RecursiveIteratorIterator::SELF_FIRST);
+            // Check if content directory exists and is readable
+            if (!@is_dir($this->content_dir) || !@is_readable($this->content_dir)) {
+                error_log("CDS: Content directory is not accessible: " . $this->content_dir);
+                return [];
+            }
+            
+            $rdi = new \RecursiveDirectoryIterator(
+                $this->content_dir, 
+                \RecursiveDirectoryIterator::SKIP_DOTS | 
+                \RecursiveDirectoryIterator::CURRENT_AS_SELF |
+                \RecursiveDirectoryIterator::UNIX_PATHS
+            );
+            
+            // Create iterator with ignore for .git directory
+            $it = new \RecursiveIteratorIterator($rdi, \RecursiveIteratorIterator::SELF_FIRST);
 
             foreach ($it as $spl_file_info) {
                 try {
                     // Skip .git directory and any permission-denied entries
+                    $filePath = $spl_file_info->getPathname();
                     $fileName = $spl_file_info->getFileName();
-                    if ($fileName === '.git' || $fileName === '' || $fileName === null) {
+                    
+                    // Skip .git directory at any level
+                    if (strpos($filePath, DIRECTORY_SEPARATOR . '.git' . DIRECTORY_SEPARATOR) !== false || 
+                        strpos($filePath, DIRECTORY_SEPARATOR . '.git') === strlen($filePath) - 5 ||
+                        $fileName === '.git' || 
+                        $fileName === '' || 
+                        $fileName === null) {
                         $it->next();
                         continue;
                     }
 
                     // Skip if we can't access the file/directory
-                    if (!$spl_file_info->isReadable()) {
+                    if (!@is_readable($filePath)) {
                         continue;
                     }
 

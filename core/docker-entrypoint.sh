@@ -127,10 +127,15 @@ chmod -R 775 /var/www/html/web/assets
 chmod -R 775 /var/www/html/logger
 chmod 775 /var/www/html || true  # Allow write to root directory for install.lock
 
+# Ensure CDS content directory has proper permissions
+mkdir -p /var/www/html/modules/cds/content
+chmod -R 775 /var/www/html/modules/cds/content 2>/dev/null || true
+
 # Try to change ownership if possible (may fail with volume mounts, but try anyway)
 chown -R www-data:www-data /var/www/html/runtime 2>/dev/null || true
 chown -R www-data:www-data /var/www/html/web/assets 2>/dev/null || true
 chown -R www-data:www-data /var/www/html/logger 2>/dev/null || true
+chown -R www-data:www-data /var/www/html/modules/cds/content 2>/dev/null || true
 
 # Ensure install.lock can be created (if directory is writable)
 if [ -w "/var/www/html" ]; then

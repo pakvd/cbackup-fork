@@ -71,16 +71,34 @@ class CdsController extends Controller
     public function actionIndex()
     {
 
+        $mtime = null;
         try {
 
             (new Cds())->updateContent();
 
+            // Try to get last update time from .git/FETCH_HEAD, but handle permission errors gracefully
             $file  = Yii::$app->getModule('cds')->getBasePath().DIRECTORY_SEPARATOR.'content'.DIRECTORY_SEPARATOR.'.git'.DIRECTORY_SEPARATOR.'FETCH_HEAD';
-            $mtime = file_exists($file) ? date(Setting::get('datetime'), filemtime($file)) : null;
+            if (@file_exists($file) && @is_readable($file)) {
+                try {
+                    $mtime = @filemtime($file);
+                    if ($mtime !== false) {
+                        $mtime = date(Setting::get('datetime'), $mtime);
+                    } else {
+                        $mtime = null;
+                    }
+                } catch (\Exception $e) {
+                    // Ignore errors getting file modification time
+                    $mtime = null;
+                }
+            }
 
         }
         catch (\Exception $e) {
-            \Y::flash('danger', $e->getMessage());
+            // Only show error if it's not a permission-related error for .git directory
+            $message = $e->getMessage();
+            if (strpos($message, 'Permission denied') === false && strpos($message, '.git') === false) {
+                \Y::flash('danger', $message);
+            }
         }
 
         return $this->render('index', [
