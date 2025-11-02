@@ -47,16 +47,37 @@ try {
 if (function_exists('error_log')) {
     error_log("=== about.php template START ===");
 }
+
+// CRITICAL: Disable any potential DB operations during template rendering
+// Try to access Yii::$app safely and disable schema cache if possible
+try {
+    if (isset(Yii::$app) && isset(Yii::$app->db)) {
+        Yii::$app->db->enableSchemaCache = false;
+        error_log("=== about.php: Schema cache disabled ===");
+    }
+} catch (\Throwable $e) {
+    error_log("=== about.php: Could not disable schema cache: " . $e->getMessage());
+}
+
+error_log("=== about.php: Before HTML start ===");
 ?>
 <div class="row">
     <div class="col-md-12">
         <div class="nav-tabs-custom">
             <ul class="nav nav-tabs">
                 <li class="active">
-                    <a href="#tab_1" data-toggle="tab"><?= Yii::t('app', 'System') ?></a>
+                    <a href="#tab_1" data-toggle="tab"><?php 
+                        error_log("=== about.php: Before Yii::t('app', 'System') ===");
+                        echo htmlspecialchars(Yii::t('app', 'System')); 
+                        error_log("=== about.php: After Yii::t('app', 'System') ===");
+                    ?></a>
                 </li>
                 <li>
-                    <a href="#tab_2" data-toggle="tab"><?= Yii::t('app', 'Diagnostics') ?></a>
+                    <a href="#tab_2" data-toggle="tab"><?php 
+                        error_log("=== about.php: Before Yii::t('app', 'Diagnostics') ===");
+                        echo htmlspecialchars(Yii::t('app', 'Diagnostics')); 
+                        error_log("=== about.php: After Yii::t('app', 'Diagnostics') ===");
+                    ?></a>
                 </li>
                 <li>
                     <a href="#tab_3" data-toggle="tab">SERVER</a>
@@ -65,7 +86,11 @@ if (function_exists('error_log')) {
                     <a href="#tab_4" data-toggle="tab">PHP info</a>
                 </li>
                 <li>
-                    <a href="#tab_5" data-toggle="tab"><?= Yii::t('help', 'Licenses') ?></a>
+                    <a href="#tab_5" data-toggle="tab"><?php 
+                        error_log("=== about.php: Before Yii::t('help', 'Licenses') ===");
+                        echo htmlspecialchars(Yii::t('help', 'Licenses')); 
+                        error_log("=== about.php: After Yii::t('help', 'Licenses') ===");
+                    ?></a>
                 </li>
                 <li class="dropdown pull-right tabdrop">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#"><i class="fa fa-ellipsis-v"></i>&nbsp;<i class="fa fa-angle-down"></i></a>
