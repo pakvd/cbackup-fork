@@ -58,9 +58,19 @@ class MaintenanceBehavior extends Behavior
     }
 
     /**
+     * Attach events
+     */
+    public function events()
+    {
+        return [
+            \yii\base\Application::EVENT_BEFORE_REQUEST => 'checkMaintenance',
+        ];
+    }
+
+    /**
      * Redirect all requests to maintenance page if update.lock exists
      */
-    public function init()
+    public function checkMaintenance($event)
     {
         $lock = Yii::$app->basePath . DIRECTORY_SEPARATOR . 'update.lock';
         if (file_exists($lock)) {
