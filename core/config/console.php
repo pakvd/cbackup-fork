@@ -83,7 +83,8 @@ $config = [
     'params' => $params,
 ];
 
-if (YII_ENV_DEV) {
+// Gii generator - only enable in development mode and if class exists
+if (YII_ENV_DEV && class_exists('yii\gii\Module')) {
     $config['bootstrap'][]    = 'gii';
     $config['modules']['gii'] = ['class' => 'yii\gii\Module'];
 }
