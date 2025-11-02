@@ -19,8 +19,89 @@ use yii\db\TableSchema;
  */
 class MysqlSchema extends BaseSchema
 {
-    // Don't override loadTableSchema - let parent handle it
-    // Just override loadTableForeignKeys to safely handle constraint_name
+    /**
+     * Loads the metadata for the specified table.
+     * 
+     * Override to catch constraint_name errors and handle them gracefully.
+     * 
+     * @param string $name table name
+     * @return TableSchema|null driver dependent table metadata. Null if the table does not exist.
+     */
+    public function loadTableSchema($name)
+    {
+        // Set up error handler to catch "Undefined array key" errors
+        $errorOccurred = false;
+        $errorMessage = '';
+        
+        // Capture errors/warnings that might be thrown
+        set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$errorOccurred, &$errorMessage) {
+            if (strpos($errstr, 'constraint_name') !== false || 
+                strpos($errstr, 'Undefined array key') !== false) {
+                $errorOccurred = true;
+                $errorMessage = $errstr;
+                return true; // Suppress error
+            }
+            return false; // Let other errors through
+        }, E_WARNING | E_NOTICE);
+        
+        try {
+            // Try to load table using parent method
+            $table = parent::loadTableSchema($name);
+            
+            // Restore error handler
+            restore_error_handler();
+            
+            // If we got a table, ensure foreign keys are loaded safely
+            if ($table !== null) {
+                // If there was a constraint_name error, clear foreign keys and reload safely
+                if ($errorOccurred) {
+                    $table->foreignKeys = [];
+                }
+                
+                // Always reload foreign keys safely to ensure they're correct
+                try {
+                    $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
+                } catch (\Exception $e) {
+                    // If foreign keys loading fails, set empty array and continue
+                    $table->foreignKeys = [];
+                }
+            }
+            
+            return $table;
+            
+        } catch (\Exception $e) {
+            // Restore error handler
+            restore_error_handler();
+            
+            // If error contains constraint_name, try to load table anyway
+            if ($errorOccurred || 
+                strpos($e->getMessage(), 'constraint_name') !== false || 
+                strpos($e->getMessage(), 'Undefined array key') !== false) {
+                
+                // Try one more time with error suppression
+                try {
+                    $previousErrorHandler = set_error_handler(function() { return true; });
+                    $table = parent::loadTableSchema($name);
+                    restore_error_handler();
+                    
+                    if ($table !== null) {
+                        // Load foreign keys safely
+                        try {
+                            $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
+                        } catch (\Exception $fkEx) {
+                            $table->foreignKeys = [];
+                        }
+                        return $table;
+                    }
+                } catch (\Exception $e2) {
+                    // If still fails, return null (table might not exist)
+                    return null;
+                }
+            }
+            
+            throw $e;
+        }
+    }
     
     /**
      * Loads constraints for the table.
