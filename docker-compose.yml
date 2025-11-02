@@ -94,6 +94,11 @@ services:
       - redis_data:/data
     networks:
       - cbackup_network
+    # Fix Redis memory overcommit warning
+    # This requires privileged mode or sysctl capabilities
+    # For production, set this on host: sysctl vm.overcommit_memory=1
+    sysctls:
+      - vm.overcommit_memory=1
     healthcheck:
       test: >
         sh -c "
