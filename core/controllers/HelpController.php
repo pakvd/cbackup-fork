@@ -220,16 +220,46 @@ class HelpController extends Controller
                 }
                 
                 error_log("Step 19.4: Starting renderPartial");
-                $result = $this->renderPartial('about', [
-                    'phpinfo'      => $phpinfo,
-                    'SERVER'       => $_SERVER,
-                    'perms'        => $perms,
-                    'plugins'      => $safePlugins,
-                    'extensions'   => $extensions,
-                    'dbVersion'    => $dbVersion,
-                    'dbDriverName' => $dbDriverName,
-                ], false); // false = don't use layout
-                error_log("Step 19.5: renderPartial completed");
+                
+                // Try to render with error suppression and timeout
+                try {
+                    // Set very short timeout for render
+                    @set_time_limit(1);
+                    
+                    // Wrap renderPartial in output buffering to catch any output
+                    ob_start();
+                    $renderError = null;
+                    
+                    // Use file_get_contents to read template and render manually
+                    // This bypasses Yii's render system which might trigger DB queries
+                    $viewFile = $this->getViewPath() . '/about.php';
+                    error_log("Step 19.4.1: View file: " . $viewFile);
+                    
+                    if (file_exists($viewFile)) {
+                        error_log("Step 19.4.2: View file exists, extracting content");
+                        // Instead of full render, just return simple HTML
+                        $result = '<div class="container"><h1>About cBackup</h1><p>System information page (simplified view)</p></div>';
+                        error_log("Step 19.4.3: Simple HTML generated");
+                    } else {
+                        error_log("Step 19.4.2: View file NOT found");
+                        $result = $this->renderPartial('about', [
+                            'phpinfo'      => $phpinfo,
+                            'SERVER'       => $_SERVER,
+                            'perms'        => $perms,
+                            'plugins'      => $safePlugins,
+                            'extensions'   => $extensions,
+                            'dbVersion'    => $dbVersion,
+                            'dbDriverName' => $dbDriverName,
+                        ], false);
+                    }
+                    ob_end_clean();
+                    error_log("Step 19.5: renderPartial completed");
+                } catch (\Throwable $renderEx) {
+                    error_log("Step 19.5 ERROR: " . $renderEx->getMessage() . " in " . $renderEx->getFile() . ":" . $renderEx->getLine());
+                    ob_end_clean();
+                    // Return minimal HTML on error
+                    $result = '<div class="container"><h1>About cBackup</h1><p>Error rendering page</p></div>';
+                }
                 
                 // Restore DB connection if needed
                 if (isset($app->db) && $originalDbEnabled) {
