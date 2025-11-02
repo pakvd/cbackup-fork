@@ -156,7 +156,22 @@ error_log("=== about.php: Before HTML start ===");
                         <tbody>
                         <tr>
                             <td><?= Yii::t('app', 'cBackup version') ?></td>
-                            <td colspan="2"><?= Yii::$app->version ?></td>
+                            <td colspan="2"><?php 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::\$app->version\n", FILE_APPEND | LOCK_EX);
+                                error_log("=== about.php: Before Yii::\$app->version ===");
+                                try {
+                                    // CRITICAL: Accessing Yii::$app->version may trigger component initialization
+                                    $version = Yii::$app->version;
+                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Yii::\$app->version = " . substr($version, 0, 20) . "\n", FILE_APPEND | LOCK_EX);
+                                    echo htmlspecialchars($version);
+                                } catch (\Throwable $e) {
+                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Yii::\$app->version ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
+                                    error_log("=== about.php: Yii::\$app->version ERROR: " . $e->getMessage());
+                                    echo 'N/A';
+                                }
+                                error_log("=== about.php: After Yii::\$app->version ===");
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::\$app->version\n", FILE_APPEND | LOCK_EX);
+                            ?></td>
                         </tr>
                         <tr>
                             <td><?= Yii::t('app', 'Environment') ?></td>
@@ -181,7 +196,11 @@ error_log("=== about.php: Before HTML start ===");
                         </tr>
                         <tr>
                             <td><?= Yii::t('help', 'Framework') ?></td>
-                            <td colspan="2">Yii <?= Yii::getVersion() ?></td>
+                            <td colspan="2">Yii <?php 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Yii::getVersion()\n", FILE_APPEND | LOCK_EX);
+                                echo Yii::getVersion(); 
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Yii::getVersion()\n", FILE_APPEND | LOCK_EX);
+                            ?></td>
                         </tr>
                         <tr>
                             <td><?= Yii::t('help', 'Framework database driver') ?></td>
@@ -194,16 +213,40 @@ error_log("=== about.php: Before HTML start ===");
                         <tr>
                             <td><?= Yii::t('help', 'Database client version') ?></td>
                             <td colspan="2"><?php
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Database client version check\n", FILE_APPEND | LOCK_EX);
+                                error_log("=== about.php: Before Database client version check ===");
                                 // Safe version - don't call mysqli functions if DB connection is closed
                                 try {
-                                    if (isset(Yii::$app->db) && Yii::$app->db->getIsActive()) {
+                                    // CRITICAL: Accessing Yii::$app->db may trigger DB queries
+                                    // Use reflection to check without triggering __get
+                                    $db = null;
+                                    try {
+                                        $reflection = new ReflectionClass('Yii');
+                                        $appProp = $reflection->getStaticPropertyValue('app', null);
+                                        if ($appProp !== null && isset($appProp->db)) {
+                                            $db = $appProp->db;
+                                        }
+                                    } catch (\Throwable $refEx) {
+                                        // Fallback to direct access if reflection fails
+                                        if (isset(Yii::$app->db)) {
+                                            $db = Yii::$app->db;
+                                        }
+                                    }
+                                    
+                                    if ($db !== null && $db->getIsActive()) {
+                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " DB is active, getting client info\n", FILE_APPEND | LOCK_EX);
                                         echo mysqli_get_client_info();
                                     } else {
+                                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " DB not active or not available\n", FILE_APPEND | LOCK_EX);
                                         echo 'N/A (DB connection closed for security)';
                                     }
                                 } catch (\Throwable $e) {
+                                    @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Database client version ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
+                                    error_log("=== about.php: Database client version ERROR: " . $e->getMessage());
                                     echo 'N/A';
                                 }
+                                error_log("=== about.php: After Database client version check ===");
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " After Database client version check\n", FILE_APPEND | LOCK_EX);
                             ?></td>
                         </tr>
                         <tr>
