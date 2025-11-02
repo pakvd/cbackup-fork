@@ -61,6 +61,9 @@ RUN echo "error_reporting = E_ALL & ~E_DEPRECATED" > /usr/local/etc/php/conf.d/d
 # In production, you can enable opcache but should restart PHP-FPM after code changes
 RUN echo "opcache.enable=0" > /usr/local/etc/php/conf.d/opcache.ini || true
 
+# Copy PHP-FPM pool configuration to increase process limit
+COPY php-fpm-pool.conf /usr/local/etc/php-fpm.d/zzz-custom.conf
+
 # Set Docker environment variable for application detection
 ENV DOCKER_CONTAINER=true
 ENV container=docker
