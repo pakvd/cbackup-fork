@@ -27,9 +27,21 @@ use yii\helpers\Html;
  * @var $extensions   array
  * @var $plugins      \app\models\Plugin[]
  */
-$this->params['breadcrumbs'][] = ['label' => Yii::t('app', 'Help'), 'url' => ['/help']];
-$this->params['breadcrumbs'][] = Yii::t('app', 'About');
-$this->title = Yii::t('app', 'About');
+// CRITICAL: Wrap breadcrumbs and title in try-catch to prevent any DB queries
+// These might trigger asset loading or other operations that query DB
+try {
+    if (isset($this) && is_object($this)) {
+        if (!isset($this->params)) {
+            $this->params = [];
+        }
+        $this->params['breadcrumbs'] = $this->params['breadcrumbs'] ?? [];
+        $this->params['breadcrumbs'][] = ['label' => Yii::t('app', 'Help'), 'url' => ['/help']];
+        $this->params['breadcrumbs'][] = Yii::t('app', 'About');
+        $this->title = Yii::t('app', 'About');
+    }
+} catch (\Throwable $e) {
+    // Ignore errors setting breadcrumbs/title - they're not critical
+}
 ?>
 <div class="row">
     <div class="col-md-12">

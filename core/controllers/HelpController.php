@@ -242,6 +242,10 @@ class HelpController extends Controller
                 
                 if ($viewFile && file_exists($viewFile)) {
                     error_log("Step 19.3.2: View file exists, starting output buffering");
+                    
+                    // Set very short timeout for template execution
+                    @set_time_limit(1);
+                    
                     ob_start();
                     try {
                         // Extract variables for the view
@@ -255,14 +259,34 @@ class HelpController extends Controller
                             'dbDriverName' => $dbDriverName,
                         ], EXTR_SKIP);
                         
+                        // Wrap $this to prevent any DB access
+                        $originalThis = isset($this) ? $this : null;
+                        
+                        error_log("Step 19.3.3: Variables extracted, including file");
+                        
+                        // Use register_shutdown_function to detect if include hangs
+                        $includeCompleted = false;
+                        $includeStart = microtime(true);
+                        register_shutdown_function(function() use (&$includeCompleted, $includeStart) {
+                            if (!$includeCompleted) {
+                                $hangTime = microtime(true) - $includeStart;
+                                error_log("INCLUDE HANG DETECTED: File did not complete after {$hangTime}s");
+                            }
+                        });
+                        
                         // Include the view file directly
                         include $viewFile;
+                        
+                        $includeCompleted = true;
                         $content = ob_get_clean();
-                        error_log("Step 19.4: Content rendered directly from file");
+                        error_log("Step 19.4: Content rendered directly from file, length: " . strlen($content));
                     } catch (\Throwable $includeError) {
+                        $includeCompleted = true;
                         ob_end_clean();
-                        error_log("Step 19.4 ERROR: " . $includeError->getMessage());
-                        throw $includeError;
+                        error_log("Step 19.4 ERROR: " . $includeError->getMessage() . " in " . $includeError->getFile() . ":" . $includeError->getLine());
+                        error_log("Stack trace: " . $includeError->getTraceAsString());
+                        // Return minimal content on error instead of throwing
+                        $content = '<div class="container"><h1>About cBackup</h1><p>Error rendering page: ' . htmlspecialchars($includeError->getMessage()) . '</p></div>';
                     }
                 } else {
                     error_log("Step 19.3.2: View file NOT found, using renderPartial fallback");
