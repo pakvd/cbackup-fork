@@ -38,6 +38,54 @@ class HelpController extends Controller
      * @var string
      */
     public $defaultAction = 'about';
+    
+    /**
+     * Filter sensitive data from $_SERVER array
+     * Removes passwords, tokens, API keys, and other sensitive information
+     * 
+     * @param array $server Original $_SERVER array
+     * @return array Filtered array with sensitive data masked
+     */
+    private static function filterServerData($server)
+    {
+        $filtered = [];
+        $sensitiveKeys = [
+            'PASSWORD', 'PASS', 'SECRET', 'TOKEN', 'KEY', 'API_KEY', 'API_SECRET',
+            'ACCESS_TOKEN', 'AUTH_TOKEN', 'SESSION_ID', 'COOKIE', 'CREDENTIAL',
+            'DB_PASSWORD', 'MYSQL_PASSWORD', 'DATABASE_PASSWORD',
+            'REDIS_PASSWORD', 'MEMCACHED_PASSWORD',
+            'HTTP_AUTHORIZATION', 'HTTP_COOKIE', 'HTTP_X_AUTH_TOKEN',
+            'PHP_AUTH_USER', 'PHP_AUTH_PW', 'PHP_AUTH_DIGEST',
+            'AWS_SECRET', 'AWS_KEY',
+        ];
+        
+        foreach ($server as $key => $value) {
+            $keyUpper = strtoupper($key);
+            $shouldFilter = false;
+            
+            // Check if key contains sensitive words
+            foreach ($sensitiveKeys as $sensitive) {
+                if (strpos($keyUpper, $sensitive) !== false) {
+                    $shouldFilter = true;
+                    break;
+                }
+            }
+            
+            if ($shouldFilter) {
+                // Mask the value but keep the key
+                $filtered[$key] = '***FILTERED***';
+            } else {
+                // Recursively filter arrays
+                if (is_array($value)) {
+                    $filtered[$key] = self::filterServerData($value);
+                } else {
+                    $filtered[$key] = $value;
+                }
+            }
+        }
+        
+        return $filtered;
+    }
 
 
     /**
@@ -121,6 +169,41 @@ class HelpController extends Controller
                         $dbVersion = $dbInfo['version'] ?? 'N/A';
                         $dbDriverName = $dbInfo['driverName'] ?? 'mysql';
                     }
+                    
+                    // Generate missing data if cache is empty (but only if we have time)
+                    // This ensures data is available even on first load
+                    if (empty($phpinfo) || empty($perms) || empty($extensions)) {
+                        @set_time_limit(3); // Give more time for generation
+                        try {
+                            if (empty($phpinfo)) {
+                                error_log("Generating phpinfo...");
+                                $sysinfo = new \app\models\Sysinfo();
+                                $phpinfo = $sysinfo->getPhpInfo();
+                                if (!empty($phpinfo)) {
+                                    $app->cache->set('help_about_phpinfo', $phpinfo, 3600); // Cache for 1 hour
+                                }
+                            }
+                            
+                            if (empty($perms)) {
+                                error_log("Generating permissions...");
+                                $perms = Install::checkPermissions();
+                                if (!empty($perms)) {
+                                    $app->cache->set('help_about_permissions', $perms, 3600); // Cache for 1 hour
+                                }
+                            }
+                            
+                            if (empty($extensions)) {
+                                error_log("Generating extensions...");
+                                $extensions = Install::getPhpExtensions();
+                                if (!empty($extensions)) {
+                                    $app->cache->set('help_about_extensions', $extensions, 3600); // Cache for 1 hour
+                                }
+                            }
+                        } catch (\Throwable $genEx) {
+                            error_log("Error generating data (ignored): " . $genEx->getMessage());
+                            // Continue with empty data
+                        }
+                    }
                 } catch (\Throwable $e) {
                     error_log("Cache read error (ignored): " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
                     // Use defaults
@@ -176,9 +259,12 @@ class HelpController extends Controller
             
             if ($elapsedBeforeRender > 1.5) {
                 error_log("TOO SLOW before render ({$elapsedBeforeRender}s), returning minimal page");
+                // Filter sensitive data from $_SERVER
+                $filteredServer = self::filterServerData($_SERVER);
+                
                 return $this->render('about', [
                     'phpinfo'      => [],
-                    'SERVER'       => $_SERVER,
+                    'SERVER'       => $filteredServer,
                     'perms'        => [],
                     'plugins'      => [],
                     'extensions'   => [],
@@ -246,12 +332,15 @@ class HelpController extends Controller
                     // Set very short timeout for template execution
                     @set_time_limit(1);
                     
+                    // Filter sensitive data from $_SERVER before passing to template
+                    $filteredServerForExtract = self::filterServerData($_SERVER);
+                    
                     ob_start();
                     try {
                         // Extract variables for the view
                         extract([
                             'phpinfo'      => $phpinfo,
-                            'SERVER'       => $_SERVER,
+                            'SERVER'       => $filteredServerForExtract,
                             'perms'        => $perms,
                             'plugins'      => $safePlugins,
                             'extensions'   => $extensions,
@@ -280,12 +369,15 @@ class HelpController extends Controller
                             pcntl_alarm(1); // 1 second alarm
                         }
                         
+                        // Filter sensitive data from $_SERVER before passing to template
+                        $filteredServer = self::filterServerData($SERVER ?? $_SERVER);
+                        
                         // Create isolated scope for include to prevent variable pollution
-                        $includeContent = function() use ($viewFile, $phpinfo, $SERVER, $perms, $safePlugins, $extensions, $dbVersion, $dbDriverName) {
+                        $includeContent = function() use ($viewFile, $phpinfo, $filteredServer, $perms, $safePlugins, $extensions, $dbVersion, $dbDriverName) {
                             // Re-extract in isolated scope
                             extract([
                                 'phpinfo'      => $phpinfo,
-                                'SERVER'       => $SERVER,
+                                'SERVER'       => $filteredServer,
                                 'perms'        => $perms,
                                 'plugins'      => $safePlugins,
                                 'extensions'   => $extensions,
@@ -315,9 +407,12 @@ class HelpController extends Controller
                     }
                 } else {
                     error_log("Step 19.3.2: View file NOT found, using renderPartial fallback");
+                    // Filter sensitive data from $_SERVER
+                    $filteredServer = self::filterServerData($_SERVER);
+                    
                     $content = $this->renderPartial('about', [
                         'phpinfo'      => $phpinfo,
-                        'SERVER'       => $_SERVER,
+                        'SERVER'       => $filteredServer,
                         'perms'        => $perms,
                         'plugins'      => $safePlugins,
                         'extensions'   => $extensions,
@@ -345,10 +440,13 @@ class HelpController extends Controller
                 ob_end_clean();
                 error_log("RENDER ERROR: " . $renderError->getMessage() . " in " . $renderError->getFile() . ":" . $renderError->getLine());
                 error_log("Stack trace: " . $renderError->getTraceAsString());
+                // Filter sensitive data from $_SERVER
+                $filteredServer = self::filterServerData($_SERVER);
+                
                 // Return minimal page on render error
                 return $this->render('about', [
                     'phpinfo'      => [],
-                    'SERVER'       => $_SERVER,
+                    'SERVER'       => $filteredServer,
                     'perms'        => [],
                     'plugins'      => [],
                     'extensions'   => [],
