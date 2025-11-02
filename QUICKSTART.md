@@ -20,7 +20,7 @@ cp .env.example .env
 ### Шаг 2: Запустите приложение
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Первый запуск займет 2-5 минут (загрузка образов).
@@ -43,7 +43,7 @@ docker-compose up -d
 
 ```bash
 # Проверить все сервисы
-docker-compose ps
+docker compose ps
 
 # Должны быть запущены:
 # - cbackup_db (MySQL)
@@ -56,10 +56,10 @@ docker-compose ps
 
 ```bash
 # Все логи
-docker-compose logs -f
+docker compose logs -f
 
 # Конкретный сервис
-docker-compose logs -f web
+docker compose logs -f web
 ```
 
 ---
@@ -71,8 +71,8 @@ docker-compose logs -f web
 **A:** Отредактируйте `.env` файл и измените `NGINX_PORT=8080` на нужный порт, затем:
 
 ```bash
-docker-compose down
-docker-compose up -d
+docker compose down
+docker compose up -d
 ```
 
 ### Q: Как изменить пароли?
@@ -84,7 +84,7 @@ docker-compose up -d
 Затем перезапустите:
 
 ```bash
-docker-compose restart db
+docker compose restart db
 ```
 
 ### Q: Порты заняты, что делать?
@@ -99,21 +99,21 @@ MYSQL_PORT=3307    # Используйте другой порт
 ### Q: Как остановить приложение?
 
 ```bash
-docker-compose stop
+docker compose stop
 ```
 
 ### Q: Как полностью удалить и начать заново?
 
 ```bash
 # Остановить и удалить контейнеры и данные
-docker-compose down -v
+docker compose down -v
 
 # Пересобрать и запустить
-docker-compose build --no-cache
-docker-compose up -d
+docker compose build --no-cache
+docker compose up -d
 ```
 
-⚠️ **Внимание**: `docker-compose down -v` удалит все данные базы данных!
+⚠️ **Внимание**: `docker compose down -v` удалит все данные базы данных!
 
 ---
 
@@ -123,29 +123,29 @@ docker-compose up -d
 
 ```bash
 # 1. Проверьте логи
-docker-compose logs
+docker compose logs
 
 # 2. Проверьте статус
-docker-compose ps
+docker compose ps
 
 # 3. Перезапустите
-docker-compose restart
+docker compose restart
 ```
 
 ### Веб-интерфейс не открывается
 
 1. Проверьте, что используете правильный порт: **http://localhost:8080**
-2. Проверьте статус: `docker-compose ps`
-3. Проверьте логи: `docker-compose logs nginx`
+2. Проверьте статус: `docker compose ps`
+3. Проверьте логи: `docker compose logs nginx`
 
 ### Ошибки базы данных
 
 ```bash
 # Перезапустите базу данных
-docker-compose restart db
+docker compose restart db
 
 # Проверьте логи
-docker-compose logs db
+docker compose logs db
 ```
 
 ---

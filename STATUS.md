@@ -27,22 +27,22 @@
 
 ```bash
 # Просмотр статуса
-docker-compose ps
+docker compose ps
 
 # Просмотр логов
-docker-compose logs -f
+docker compose logs -f
 
 # Остановка
-docker-compose stop
+docker compose stop
 
 # Запуск
-docker-compose start
+docker compose start
 
 # Перезапуск
-docker-compose restart
+docker compose restart
 
 # Остановка и удаление
-docker-compose down
+docker compose down
 ```
 
 ### Известные проблемы
@@ -66,12 +66,12 @@ docker-compose down
 
 ```bash
 # Логи веб-сервера
-docker-compose logs -f web
+docker compose logs -f web
 
 # Логи базы данных
-docker-compose logs -f db
+docker compose logs -f db
 
 # Логи Nginx
-docker-compose logs -f nginx
+docker compose logs -f nginx
 ```
 

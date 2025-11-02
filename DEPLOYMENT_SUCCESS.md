@@ -60,38 +60,38 @@
 
 ```bash
 # Просмотр статуса
-docker-compose ps
+docker compose ps
 
 # Просмотр логов
-docker-compose logs -f
+docker compose logs -f
 
 # Остановка
-docker-compose stop
+docker compose stop
 
 # Запуск
-docker-compose start
+docker compose start
 
 # Перезапуск
-docker-compose restart
+docker compose restart
 
 # Полная остановка
-docker-compose down
+docker compose down
 ```
 
 ## 🔍 Проверка работоспособности
 
 ```bash
 # Проверить все сервисы
-docker-compose ps
+docker compose ps
 
 # Проверить логи worker (Java 21)
-docker-compose logs worker
+docker compose logs worker
 
 # Проверить логи веб-сервера
-docker-compose logs web
+docker compose logs web
 
 # Проверить базу данных
-docker-compose logs db
+docker compose logs db
 
 # Проверить доступность веб-интерфейса
 curl http://localhost:8080

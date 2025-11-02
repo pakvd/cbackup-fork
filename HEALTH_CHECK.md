@@ -73,13 +73,13 @@ cp .env.example .env
 nano .env
 
 # Запустите проект
-docker-compose up -d
+docker compose up -d
 
 # Проверьте статус
-docker-compose ps
+docker compose ps
 
 # Проверьте логи
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ## ⚠️ Известные предупреждения
@@ -97,12 +97,12 @@ docker-compose logs -f
 
 **Статус: ✅ ГОТОВ К ЗАПУСКУ**
 
-Все компоненты на месте, конфигурация валидна. Проект готов к запуску через `docker-compose up -d`.
+Все компоненты на месте, конфигурация валидна. Проект готов к запуску через `docker compose up -d`.
 
 ### Следующие шаги:
 
 1. Создайте `.env` файл с паролями
-2. Запустите `docker-compose up -d`
+2. Запустите `docker compose up -d`
 3. Откройте http://localhost в браузере
 4. Следуйте инструкциям установщика
 
@@ -143,5 +143,5 @@ docker-compose logs -f
 
 Проект полностью собран, все компоненты на месте, конфигурация валидна. Система готова к запуску в Docker контейнерах.
 
-**Время до запуска:** ~5 минут (создание .env + docker-compose up)
+**Время до запуска:** ~5 минут (создание .env + docker compose up)
 

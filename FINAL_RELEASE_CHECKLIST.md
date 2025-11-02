@@ -61,7 +61,7 @@
 cp .env.example .env
 
 # 2. Запустить
-docker-compose up -d
+docker compose up -d
 
 # 3. Открыть в браузере
 open http://localhost:8080
@@ -107,10 +107,10 @@ open http://localhost:8080
 ### Функциональность
 ```bash
 # Проверить статус
-docker-compose ps
+docker compose ps
 
 # Проверить логи
-docker-compose logs -f
+docker compose logs -f
 
 # Проверить веб-интерфейс
 curl http://localhost:8080
@@ -177,7 +177,7 @@ cbackup/
 - ✅ Персистентные тома
 
 ### Следующие шаги:
-1. Запустите проект: `docker-compose up -d`
+1. Запустите проект: `docker compose up -d`
 2. Настройте пароли в `.env`
 3. Следуйте инструкциям установщика
 4. Настройте первое устройство для бэкапа

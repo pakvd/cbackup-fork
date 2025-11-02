@@ -31,7 +31,7 @@ MYSQL_ROOT_PASSWORD=your_secure_root_password
 #### 2. Запуск приложения
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Первый запуск может занять 2-5 минут (загрузка образов и установка зависимостей).
@@ -48,15 +48,15 @@ docker-compose up -d
 
 ```bash
 # Проверить статус всех сервисов
-docker-compose ps
+docker compose ps
 
 # Просмотреть логи
-docker-compose logs -f
+docker compose logs -f
 
 # Проверить конкретный сервис
-docker-compose logs -f web
-docker-compose logs -f worker
-docker-compose logs -f db
+docker compose logs -f web
+docker compose logs -f worker
+docker compose logs -f db
 ```
 
 ## 📋 Структура проекта
@@ -73,7 +73,7 @@ cbackup/
 ├── nginx/                # Конфигурация Nginx
 │   ├── nginx.conf
 │   └── default.conf
-├── docker-compose.yml    # Основной файл Docker Compose
+├── docker compose.yml    # Основной файл Docker Compose
 ├── .env.example          # Пример переменных окружения
 └── README.md            # Этот файл
 ```
@@ -83,38 +83,38 @@ cbackup/
 ### Остановка
 
 ```bash
-docker-compose stop
+docker compose stop
 ```
 
 ### Запуск
 
 ```bash
-docker-compose start
+docker compose start
 ```
 
 ### Перезапуск
 
 ```bash
-docker-compose restart
+docker compose restart
 ```
 
 ### Полная остановка с удалением контейнеров
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### Очистка данных (⚠️ удалит все данные БД)
 
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Пересборка образов
 
 ```bash
-docker-compose build --no-cache
-docker-compose up -d
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ## 🔧 Конфигурация
@@ -159,8 +159,8 @@ MYSQL_PORT=3307    # Используйте другой порт
 Затем перезапустите:
 
 ```bash
-docker-compose down
-docker-compose up -d
+docker compose down
+docker compose up -d
 ```
 
 ### Проблема: Сервисы не запускаются
@@ -169,7 +169,7 @@ docker-compose up -d
 
 1. Проверьте логи:
 ```bash
-docker-compose logs
+docker compose logs
 ```
 
 2. Проверьте, что порты не заняты:
@@ -185,9 +185,9 @@ lsof -i :3306
 
 3. Пересоберите образы:
 ```bash
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ### Проблема: Ошибки подключения к базе данных
@@ -196,12 +196,12 @@ docker-compose up -d
 
 1. Проверьте, что база данных запущена:
 ```bash
-docker-compose ps db
+docker compose ps db
 ```
 
 2. Проверьте логи базы данных:
 ```bash
-docker-compose logs db
+docker compose logs db
 ```
 
 3. Проверьте переменные окружения:
@@ -211,7 +211,7 @@ cat .env | grep MYSQL
 
 4. Перезапустите базу данных:
 ```bash
-docker-compose restart db
+docker compose restart db
 ```
 
 ### Проблема: Веб-интерфейс не открывается
@@ -220,17 +220,17 @@ docker-compose restart db
 
 1. Проверьте статус всех сервисов:
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 2. Проверьте логи Nginx:
 ```bash
-docker-compose logs nginx
+docker compose logs nginx
 ```
 
 3. Проверьте логи PHP:
 ```bash
-docker-compose logs web
+docker compose logs web
 ```
 
 4. Убедитесь, что используете правильный порт:
@@ -243,11 +243,11 @@ docker-compose logs web
 
 ```bash
 # Исправить права на runtime директории
-docker-compose exec web chmod -R 775 /var/www/html/runtime
-docker-compose exec web chmod -R 775 /var/www/html/web/assets
+docker compose exec web chmod -R 775 /var/www/html/runtime
+docker compose exec web chmod -R 775 /var/www/html/web/assets
 
 # Проверить владельца файлов
-docker-compose exec web ls -la /var/www/html/runtime
+docker compose exec web ls -la /var/www/html/runtime
 ```
 
 ## 📝 Миграции базы данных
@@ -257,7 +257,7 @@ docker-compose exec web ls -la /var/www/html/runtime
 Для ручного применения миграций Yii2:
 
 ```bash
-docker-compose exec web php yii migrate
+docker compose exec web php yii migrate
 ```
 
 ## 🔒 Безопасность
@@ -298,33 +298,33 @@ docker-compose exec web php yii migrate
 
 ```bash
 # 1. Остановите контейнеры
-docker-compose down
+docker compose down
 
 # 2. Обновите код (если используете git)
 git pull
 
 # 3. Пересоберите образы
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # 4. Запустите снова
-docker-compose up -d
+docker compose up -d
 
 # 5. Примените миграции БД (если есть)
-docker-compose exec web php yii migrate
+docker compose exec web php yii migrate
 ```
 
 ## 💡 Полезные команды
 
 ```bash
 # Просмотр логов последние 100 строк
-docker-compose logs --tail=100
+docker compose logs --tail=100
 
 # Просмотр логов конкретного сервиса
-docker-compose logs -f web
+docker compose logs -f web
 
 # Выполнение команды в контейнере
-docker-compose exec web php yii migrate
-docker-compose exec db mysql -u cbackup -p cbackup
+docker compose exec web php yii migrate
+docker compose exec db mysql -u cbackup -p cbackup
 
 # Просмотр использования ресурсов
 docker stats
@@ -345,8 +345,8 @@ docker system prune -a
 
 Если вы столкнулись с проблемами:
 
-1. Проверьте логи: `docker-compose logs`
-2. Проверьте статус сервисов: `docker-compose ps`
+1. Проверьте логи: `docker compose logs`
+2. Проверьте статус сервисов: `docker compose ps`
 3. Обратитесь к разделу "Решение проблем" выше
 4. Проверьте оригинальную документацию: https://github.com/cBackup/main
 
