@@ -2,24 +2,27 @@
 
 ## Проблема
 
-После обновления кода появилось сообщение:
+При синхронизации `application.properties` может появиться сообщение:
 ```
-Failed to synchronize. Directory writable: no, File writable: no
+Failed to synchronize. Please fix file permissions manually...
 ```
 
-Это означает, что директория `core/bin/` и/или файл `core/bin/application.properties` не доступны для записи веб-серверу.
+Это означает, что директория `core/bin/` и/или файл `core/bin/application.properties` не доступны для записи веб-серверу (www-data).
 
 ## Решение
 
-### Вариант 1: Исправить права через команду (рекомендуется)
+### Вариант 1: Исправить права через Docker (рекомендуется)
+
+Выполните одну из следующих команд на сервере:
 
 ```bash
-# В контейнере web
-docker compose exec web chmod 755 /var/www/html/bin
-docker compose exec web chmod 644 /var/www/html/bin/application.properties
+# Полное исправление прав (владелец + права доступа)
+docker compose exec web bash -c "chown -R www-data:www-data /var/www/html/bin && chmod 755 /var/www/html/bin && chmod 644 /var/www/html/bin/application.properties"
 
-# Или создать файл, если его нет
-docker compose exec web touch /var/www/html/bin/application.properties
+# Или по отдельности:
+docker compose exec web chown www-data:www-data /var/www/html/bin
+docker compose exec web chown www-data:www-data /var/www/html/bin/application.properties
+docker compose exec web chmod 755 /var/www/html/bin
 docker compose exec web chmod 644 /var/www/html/bin/application.properties
 ```
 
@@ -37,10 +40,10 @@ chmod 644 core/bin/application.properties
 sudo chown www-data:www-data core/bin core/bin/application.properties
 ```
 
-### Вариант 3: Использовать консольную команду
+### Вариант 3: Использовать консольную команду для диагностики
 
 ```bash
-# Проверить и исправить автоматически
+# Проверить текущее состояние
 docker compose exec web php yii sync-properties/check
 ```
 
@@ -49,6 +52,11 @@ docker compose exec web php yii sync-properties/check
 2. Покажет права доступа
 3. Попытается исправить права автоматически
 4. Выполнит синхронизацию
+
+**Важно:** После исправления прав перезапустите контейнер web, чтобы изменения вступили в силу:
+```bash
+docker compose restart web
+```
 
 ## Проверка
 

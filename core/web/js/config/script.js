@@ -111,14 +111,12 @@ $(document).on('ready pjax:end', function() {
         var btn_id = $btn.attr('id');
         
         if (!url) {
-            console.error('URL not found for button:', btn_id);
             toastr.error('URL не найден для кнопки', '', {timeOut: 5000, closeButton: true});
             return false;
         }
         
         var btn_element = document.querySelector('#' + btn_id);
         if (!btn_element) {
-            console.error('Button element not found:', btn_id);
             toastr.error('Элемент кнопки не найден', '', {timeOut: 5000, closeButton: true});
             return false;
         }
@@ -134,13 +132,11 @@ $(document).on('ready pjax:end', function() {
                 btn_lock.start();
             },
             success: function (data) {
-                console.log('Sync response:', data);
                 if (isJson(data)) {
                     showStatus(data);
                     // For sync_properties, check if sync was successful and reload page
                     if (btn_id === 'sync_properties') {
                         var response = JSON.parse(data);
-                        console.log('Sync status:', response.status);
                         if (response.status === 'success') {
                             // Reload page after successful sync to clear warning
                             setTimeout(function() {
@@ -149,12 +145,10 @@ $(document).on('ready pjax:end', function() {
                         }
                     }
                 } else {
-                    console.warn('Response is not JSON:', data);
                     toastr.warning(data, '', {timeOut: 0, closeButton: true});
                 }
             },
             error: function (xhr, status, error) {
-                console.error('AJAX error:', status, error, xhr.responseText);
                 toastr.error(xhr.responseText || 'Ошибка при выполнении запроса: ' + error, '', {timeOut: 0, closeButton: true});
             }
         }).always(function(){
