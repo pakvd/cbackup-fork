@@ -131,13 +131,58 @@ chmod 775 /var/www/html || true  # Allow write to root directory for install.loc
 mkdir -p /var/www/html/modules/cds/content
 chmod -R 775 /var/www/html/modules/cds/content 2>/dev/null || true
 
+# Ensure bin directory exists
+mkdir -p /var/www/html/bin
+
+# Copy or create cbackup.jar
+# Note: In production, this file should be copied from worker container during build/deployment
+if [ ! -f "/var/www/html/bin/cbackup.jar" ]; then
+    echo "=== cbackup.jar not found ==="
+    # Try to copy from worker build directory (if building locally)
+    if [ -f "/var/www/html/../worker/target/cbackup.jar" ]; then
+        cp /var/www/html/../worker/target/cbackup.jar /var/www/html/bin/cbackup.jar
+        echo "✓ Copied cbackup.jar from worker build directory"
+    else
+        echo "⚠ cbackup.jar not found. Creating placeholder."
+        echo "  In production, copy it from worker container: docker compose cp worker:/app/app.jar core/bin/cbackup.jar"
+        # Create empty placeholder (diagnostics will still check permissions)
+        touch /var/www/html/bin/cbackup.jar 2>/dev/null || true
+    fi
+fi
+
+# Create application.properties if it doesn't exist (from template)
+if [ ! -f "/var/www/html/bin/application.properties" ]; then
+    echo "=== Creating application.properties from template ==="
+    cat > /var/www/html/bin/application.properties << 'EOF'
+# SSH Daemon Shell Configuration
+sshd.shell.port=8437
+sshd.shell.enabled=false
+sshd.shell.username=cbadmin
+sshd.shell.password=KqPOPh2Lf
+sshd.shell.host=localhost
+sshd.shell.auth.authType=SIMPLE
+sshd.shell.prompt.title=cbackup
+
+# Spring Configuration
+spring.main.banner-mode=off
+
+# cBackup Configuration
+cbackup.scheme=http
+cbackup.site=http://web/index.php
+cbackup.token=D0B221B7-B88A-4DF1-8254-76E8766F285B
+EOF
+    echo "✓ Created application.properties"
+fi
+
 # Set correct permissions for bin files
 if [ -f "/var/www/html/bin/cbackup.jar" ]; then
     chmod 555 /var/www/html/bin/cbackup.jar 2>/dev/null || true
+    echo "✓ Set permissions for cbackup.jar (555)"
 fi
 if [ -f "/var/www/html/bin/application.properties" ]; then
     chmod 664 /var/www/html/bin/application.properties 2>/dev/null || true
     chmod -x /var/www/html/bin/application.properties 2>/dev/null || true
+    echo "✓ Set permissions for application.properties (664)"
 fi
 
 # Try to change ownership if possible (may fail with volume mounts, but try anyway)
