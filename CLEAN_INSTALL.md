@@ -46,3 +46,26 @@ docker compose up -d
 
 После запуска откройте `http://localhost:8080` - должен появиться мастер установки.
 
+## Добавление дефолтных задач (если отсутствуют):
+
+После установки должны автоматически создаваться дефолтные задачи:
+- `backup` - задача резервного копирования
+- `discovery` - задача обнаружения устройств
+- `stp` - сбор информации STP
+- `save` - сохранение в файловую систему
+- `git_commit` - коммит в Git
+- `log_processing` - обработка логов
+- `node_processing` - обработка узлов
+
+Если задачи отсутствуют, выполните:
+
+```bash
+docker compose exec web php /var/www/html/add_default_tasks.php
+```
+
+Или вручную через SQL:
+
+```bash
+docker compose exec db mysql -u cbackup -p cbackup < /path/to/default_tasks.sql
+```
+

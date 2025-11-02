@@ -436,14 +436,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 
                 // Insert default tasks (system tasks that should exist by default)
                 // These tasks are referenced in documentation and may be used by the system
-                $pdo->exec("INSERT IGNORE INTO `task` (`name`, `task_type`, `put`, `table`, `protected`, `description`) VALUES
-                    ('backup', 'backup', 'database', 'out_backup', 1, 'Backup task - stores configuration backups in database'),
-                    ('discovery', 'discovery', NULL, NULL, 1, 'Discovery task - automatically discovers network devices'),
-                    ('stp', 'custom', 'database', 'out_stp', 1, 'STP information collection task'),
-                    ('save', 'custom', 'file', NULL, 1, 'Save task - saves configurations to file system'),
-                    ('git_commit', 'custom', 'git', NULL, 1, 'Git commit task - commits changes to Git repository'),
-                    ('log_processing', 'custom', NULL, NULL, 1, 'Log processing task'),
-                    ('node_processing', 'custom', NULL, NULL, 1, 'Node processing task')");
+                try {
+                    $defaultTasks = [
+                        ['backup', 'backup', 'database', 'out_backup', 1, 'Backup task - stores configuration backups in database'],
+                        ['discovery', 'discovery', null, null, 1, 'Discovery task - automatically discovers network devices'],
+                        ['stp', 'custom', 'database', 'out_stp', 1, 'STP information collection task'],
+                        ['save', 'custom', 'file', null, 1, 'Save task - saves configurations to file system'],
+                        ['git_commit', 'custom', 'git', null, 1, 'Git commit task - commits changes to Git repository'],
+                        ['log_processing', 'custom', null, null, 1, 'Log processing task'],
+                        ['node_processing', 'custom', null, null, 1, 'Node processing task']
+                    ];
+                    
+                    $stmt = $pdo->prepare("INSERT IGNORE INTO `task` (`name`, `task_type`, `put`, `table`, `protected`, `description`) VALUES (?, ?, ?, ?, ?, ?)");
+                    foreach ($defaultTasks as $task) {
+                        $stmt->execute($task);
+                    }
+                } catch (Exception $e) {
+                    // Log error but continue installation
+                    error_log("Failed to insert default tasks: " . $e->getMessage());
+                }
                 
                 // Create worker table
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `worker` (
