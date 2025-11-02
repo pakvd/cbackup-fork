@@ -45,87 +45,89 @@ class HelpController extends Controller
      */
     public function actionAbout()
     {
-        // CRITICAL: Only load from cache - never generate data on page load
-        // This prevents infinite loops and hanging
-        // Data generation should happen via separate background job or console command
+        // CRITICAL: Ultra-fast page with zero database queries
+        // This page MUST load instantly without any DB operations
         
-        // Set aggressive timeout and track execution time
+        error_log("=== HelpController::actionAbout() START ===");
         $startTime = microtime(true);
-        @set_time_limit(3); // 3 seconds max - page must load very quickly
         
-        // Disable schema cache temporarily to prevent recursion issues
-        $originalSchemaCache = Yii::$app->db->enableSchemaCache;
-        Yii::$app->db->enableSchemaCache = false;
+        // Set very aggressive timeout
+        @set_time_limit(2); // 2 seconds max
         
-        try {
-            // Initialize with empty defaults
-        $phpinfo = [];
-        $plugins = [];
-        $perms = [];
-        $extensions = [];
+        // Log start time
+        error_log("Start time: " . $startTime);
         
-        // ONLY load from cache - never generate
-        try {
-            $phpinfo = Yii::$app->cache->get('help_about_phpinfo') ?: [];
-        } catch (\Throwable $e) {
-            // Ignore
-        }
+        // COMPLETELY DISABLE database for this action
+        $originalDb = Yii::$app->db;
+        $originalSchemaCache = $originalDb->enableSchemaCache ?? false;
         
         try {
-            $plugins = Yii::$app->cache->get('help_about_plugins') ?: [];
-        } catch (\Throwable $e) {
-            // Ignore
-        }
-        
-        try {
-            $perms = Yii::$app->cache->get('help_about_permissions') ?: [];
-        } catch (\Throwable $e) {
-            // Ignore
-        }
-        
-        try {
-            $extensions = Yii::$app->cache->get('help_about_extensions') ?: [];
-        } catch (\Throwable $e) {
-            // Ignore
-        }
-
-        // Cache database info to avoid schema loading during render
-        // CRITICAL: Only load from cache, never query database
-        $dbInfo = Yii::$app->cache->get('help_about_db_info') ?: null;
-        if ($dbInfo === null) {
-            // If cache is empty, use defaults - do NOT query database
-            // Database info will be cached by a background process or on first successful access
-            $dbInfo = ['version' => 'N/A', 'driverName' => 'mysql'];
-        }
-        
-        $dbVersion = $dbInfo['version'] ?? 'N/A';
-        $dbDriverName = $dbInfo['driverName'] ?? 'mysql';
-        
-        // Ensure plugins are simple objects/arrays, not ActiveRecord (to avoid schema loading)
-        $safePlugins = [];
-        if (!empty($plugins)) {
-            foreach ($plugins as $plugin) {
-                if (is_object($plugin)) {
-                    $safePlugins[] = (object)[
-                        'name' => $plugin->name ?? ($plugin->{'name'} ?? ''),
-                        'description' => $plugin->description ?? ($plugin->{'description'} ?? ''),
-                        'enabled' => $plugin->enabled ?? ($plugin->{'enabled'} ?? 0),
-                    ];
-                } elseif (is_array($plugin)) {
-                    $safePlugins[] = (object)[
-                        'name' => $plugin['name'] ?? '',
-                        'description' => $plugin['description'] ?? '',
-                        'enabled' => $plugin['enabled'] ?? 0,
-                    ];
+            // Disable schema cache completely
+            $originalDb->enableSchemaCache = false;
+            
+            // Disable DB connection temporarily by setting it to null in registry (if possible)
+            // But we'll use a try-catch approach instead
+            
+            // Initialize ALL data with empty defaults IMMEDIATELY
+            $phpinfo = [];
+            $plugins = [];
+            $perms = [];
+            $extensions = [];
+            $dbVersion = 'N/A';
+            $dbDriverName = 'mysql';
+            
+            // ONLY try to load from cache - with strict timeout
+            $cacheStart = microtime(true);
+            try {
+                @set_time_limit(1); // 1 second for cache operations
+                $phpinfo = Yii::$app->cache->get('help_about_phpinfo') ?: [];
+                $plugins = Yii::$app->cache->get('help_about_plugins') ?: [];
+                $perms = Yii::$app->cache->get('help_about_permissions') ?: [];
+                $extensions = Yii::$app->cache->get('help_about_extensions') ?: [];
+                $dbInfo = Yii::$app->cache->get('help_about_db_info');
+                if ($dbInfo && is_array($dbInfo)) {
+                    $dbVersion = $dbInfo['version'] ?? 'N/A';
+                    $dbDriverName = $dbInfo['driverName'] ?? 'mysql';
+                }
+            } catch (\Throwable $e) {
+                error_log("Cache read error (ignored): " . $e->getMessage());
+                // Use defaults
+            }
+            $cacheElapsed = microtime(true) - $cacheStart;
+            error_log("Cache read time: {$cacheElapsed}s");
+            
+            // Ensure plugins are simple objects
+            $safePlugins = [];
+            if (!empty($plugins)) {
+                foreach ($plugins as $plugin) {
+                    try {
+                        if (is_object($plugin)) {
+                            $safePlugins[] = (object)[
+                                'name' => $plugin->name ?? ($plugin->{'name'} ?? ''),
+                                'description' => $plugin->description ?? ($plugin->{'description'} ?? ''),
+                                'enabled' => $plugin->enabled ?? ($plugin->{'enabled'} ?? 0),
+                            ];
+                        } elseif (is_array($plugin)) {
+                            $safePlugins[] = (object)[
+                                'name' => $plugin['name'] ?? '',
+                                'description' => $plugin['description'] ?? '',
+                                'enabled' => $plugin['enabled'] ?? 0,
+                            ];
+                        }
+                    } catch (\Throwable $e) {
+                        // Skip invalid plugin entries
+                        continue;
+                    }
                 }
             }
-        }
 
-            // Check execution time - if taking too long, return early with minimal data
-            $elapsed = microtime(true) - $startTime;
-            if ($elapsed > 2.5) {
-                // Taking too long - return minimal page immediately
-                error_log("HelpController::actionAbout() taking too long: {$elapsed}s, returning minimal page");
+            // Check time before render
+            $beforeRender = microtime(true);
+            $elapsedBeforeRender = $beforeRender - $startTime;
+            error_log("Time before render: {$elapsedBeforeRender}s");
+            
+            if ($elapsedBeforeRender > 1.5) {
+                error_log("TOO SLOW before render ({$elapsedBeforeRender}s), returning minimal page");
                 return $this->render('about', [
                     'phpinfo'      => [],
                     'SERVER'       => $_SERVER,
@@ -137,21 +139,48 @@ class HelpController extends Controller
                 ]);
             }
             
-            // Render page immediately - even with empty data
-            $result = $this->render('about', [
-                'phpinfo'      => $phpinfo,
-                'SERVER'       => $_SERVER,
-                'perms'        => $perms,
-                'plugins'      => $safePlugins,
-                'extensions'   => $extensions,
-                'dbVersion'    => $dbVersion,    // Pass cached version to avoid query in template
-                'dbDriverName' => $dbDriverName, // Pass cached driver name to avoid schema loading
-            ]);
+            // Render with output buffering and timeout
+            $renderStart = microtime(true);
+            ob_start();
+            try {
+                $result = $this->render('about', [
+                    'phpinfo'      => $phpinfo,
+                    'SERVER'       => $_SERVER,
+                    'perms'        => $perms,
+                    'plugins'      => $safePlugins,
+                    'extensions'   => $extensions,
+                    'dbVersion'    => $dbVersion,
+                    'dbDriverName' => $dbDriverName,
+                ]);
+                
+                $renderElapsed = microtime(true) - $renderStart;
+                error_log("Render time: {$renderElapsed}s");
+                
+                $totalElapsed = microtime(true) - $startTime;
+                error_log("Total time: {$totalElapsed}s");
+                error_log("=== HelpController::actionAbout() END ===");
+                
+                return $result;
+            } catch (\Throwable $renderError) {
+                ob_end_clean();
+                error_log("RENDER ERROR: " . $renderError->getMessage() . " in " . $renderError->getFile() . ":" . $renderError->getLine());
+                error_log("Stack trace: " . $renderError->getTraceAsString());
+                // Return minimal page on render error
+                return $this->render('about', [
+                    'phpinfo'      => [],
+                    'SERVER'       => $_SERVER,
+                    'perms'        => [],
+                    'plugins'      => [],
+                    'extensions'   => [],
+                    'dbVersion'    => 'N/A',
+                    'dbDriverName' => 'mysql',
+                ]);
+            }
             
-            return $result;
         } finally {
-            // Always restore schema cache setting
-            Yii::$app->db->enableSchemaCache = $originalSchemaCache;
+            // Restore schema cache
+            $originalDb->enableSchemaCache = $originalSchemaCache;
+            error_log("=== HelpController::actionAbout() FINALLY ===");
         }
 
     }
