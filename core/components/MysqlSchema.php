@@ -31,75 +31,49 @@ class MysqlSchema extends BaseSchema
     {
         // Override parent method to use safe foreign keys loading
         // This prevents constraint_name errors in MySQL 8.0
-        // Always try to load table schema, even if foreign keys fail
-        
-        // Set up error handler to catch "Undefined array key" errors
-        $constraintNameError = false;
-        $errorHandler = set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$constraintNameError) {
-            if (strpos($errstr, 'constraint_name') !== false || 
-                strpos($errstr, 'Undefined array key') !== false) {
-                $constraintNameError = true;
-                return true; // Suppress error
-            }
-            return false; // Let other errors through
-        });
+        // Simply use parent method - it will call our overridden loadTableForeignKeys which is safe
         
         try {
-            // Try to load table using parent method
-            $table = parent::loadTableSchema($name);
-            
-            // Restore error handler
-            restore_error_handler();
-            
-            // If we got a table, ensure foreign keys are loaded safely
-            if ($table !== null) {
-                // If there was a constraint_name error, clear foreign keys and reload safely
-                if ($constraintNameError) {
-                    $table->foreignKeys = [];
-                }
-                
-                try {
-                    $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
-                } catch (\Exception $e) {
-                    // If foreign keys loading fails, set empty array and continue
-                    $table->foreignKeys = [];
-                }
-                return $table;
-            }
-            
-            // If parent returned null, table doesn't exist
-            return null;
-            
+            // Parent method will call our overridden loadTableForeignKeys which handles constraint_name safely
+            return parent::loadTableSchema($name);
         } catch (\Exception $e) {
-            // Restore error handler
-            restore_error_handler();
-            
-            // If error contains constraint_name, try to work around it
-            if ($constraintNameError || 
-                strpos($e->getMessage(), 'constraint_name') !== false || 
+            // If error contains constraint_name, return null to indicate table doesn't exist or can't be loaded
+            if (strpos($e->getMessage(), 'constraint_name') !== false || 
                 strpos($e->getMessage(), 'Undefined array key') !== false) {
-                
-                // Try to load table again with safe foreign keys only
-                try {
-                    $table = parent::loadTableSchema($name);
-                    if ($table !== null) {
-                        // Load foreign keys safely
-                        try {
-                            $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
-                        } catch (\Exception $fkEx) {
-                            $table->foreignKeys = [];
-                        }
-                        return $table;
-                    }
-                } catch (\Exception $e2) {
-                    // If still fails, table might not exist or there's a real problem
-                    // Return null so caller knows table doesn't exist
-                }
-                
-                // If we can't load it, return null (table might not exist)
+                // Return null - let the caller handle it
                 return null;
             }
             throw $e;
+        }
+    }
+    
+    /**
+     * Load table without foreign keys (simplified fallback)
+     * 
+     * @param string $name table name
+     * @return TableSchema|null
+     */
+    protected function loadTableWithoutForeignKeysFallback($name)
+    {
+        // Simple check if table exists first
+        $exists = $this->db->createCommand()
+            ->select('COUNT(*)')
+            ->from('information_schema.tables')
+            ->where([
+                'table_schema' => $this->db->schemaName ?: $this->db->createCommand("SELECT DATABASE()")->queryScalar(),
+                'table_name' => $name
+            ])
+            ->queryScalar() > 0;
+        
+        if (!$exists) {
+            return null;
+        }
+        
+        // Try parent method - it should work since we override loadTableForeignKeys
+        try {
+            return parent::loadTableSchema($name);
+        } catch (\Exception $e) {
+            return null;
         }
     }
     
