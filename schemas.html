@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cBackup - Логические и сетевые схемы</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        h2 {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            margin-top: 40px;
+            font-size: 1.8em;
+        }
+        h3 {
+            color: #764ba2;
+            margin-top: 30px;
+            font-size: 1.3em;
+        }
+        .diagram-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 2px solid #e0e0e0;
+        }
+        .mermaid {
+            text-align: center;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            border: 2px solid #333;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .toc {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .toc li {
+            padding: 5px 0;
+        }
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 cBackup - Архитектурные схемы</h1>
+        
+        <div class="toc">
+            <h3>📑 Содержание</h3>
+            <ul>
+                <li><a href="#logical">1. Логическая схема приложения</a></li>
+                <li><a href="#network">2. Сетевая схема (Docker Network)</a></li>
+                <li><a href="#sequence">3. Последовательность выполнения задачи</a></li>
+                <li><a href="#components">4. Схема компонентов</a></li>
+                <li><a href="#ports">5. Схема портов и подключений</a></li>
+                <li><a href="#database">6. Схема базы данных</a></li>
+                <li><a href="#docker">7. Схема Docker Compose</a></li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <strong>ℹ️ Информация:</strong> Эти диаграммы созданы с использованием Mermaid.js. 
+            Откройте этот файл в браузере для интерактивной визуализации.
+        </div>
+
+        <h2 id="logical">1. 🔷 Логическая схема приложения</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph TB
+    User[👤 Пользователь<br/>Браузер]
+    
+    subgraph "Внешний доступ"
+        Nginx[🌐 NGINX<br/>Веб-сервер<br/>Порт: 8080/443]
+    end
+    
+    subgraph "Внутренняя сеть Docker (cbackup_network)"
+        Web[🐘 Web Container<br/>PHP-FPM + Yii2<br/>Порт: 9000]
+        
+        subgraph "Web Components"
+            Controllers[Контроллеры<br/>Config, Node, Task]
+            Components[Компоненты<br/>NetSsh, Service, Telnet]
+            API[API Endpoints<br/>v1/core/*, v2/core/*]
+        end
+        
+        Worker[☕ Worker Container<br/>Java Spring Boot]
+        
+        subgraph "Worker Components"
+            Scheduler[📅 Scheduler<br/>Планировщик задач]
+            Workers[🔧 Workers<br/>SSH, Telnet, SNMP]
+            APIClient[📡 API Client<br/>HTTP запросы к Web]
+        end
+        
+        DB[(🗄️ MySQL<br/>База данных<br/>Порт: 3306)]
+        Redis[(💾 Redis<br/>Кеш<br/>Порт: 6379)]
+    end
+    
+    subgraph "External"
+        Devices[🌐 Сетевое оборудование<br/>SSH/Telnet/SNMP]
+    end
+    
+    subgraph "Shared Resources"
+        SharedVolume[📁 Shared Volume<br/>core/bin/<br/>application.properties]
+    end
+    
+    User -->|HTTP/HTTPS| Nginx
+    Nginx -->|FastCGI :9000| Web
+    Web -->|MySQL :3306| DB
+    Web -->|Redis :6379| Redis
+    Web -->|HTTP API| Worker
+    Worker -->|MySQL JDBC :3306| DB
+    Worker -->|SSH/Telnet/SNMP| Devices
+    Web -.->|Чтение/Запись| SharedVolume
+    Worker -.->|Чтение/Запись| SharedVolume
+    
+    Web --> Controllers
+    Web --> Components
+    Web --> API
+    
+    Worker --> Scheduler
+    Worker --> Workers
+    Worker --> APIClient
+    
+    style User fill:#e1f5ff,stroke:#01579b,stroke-width:3px
+    style Nginx fill:#fff4e1,stroke:#e65100,stroke-width:3px
+    style Web fill:#e8f5e9,stroke:#1b5e20,stroke-width:3px
+    style Worker fill:#fff3e0,stroke:#e65100,stroke-width:3px
+    style DB fill:#f3e5f5,stroke:#4a148c,stroke-width:3px
+    style Redis fill:#ffebee,stroke:#b71c1c,stroke-width:3px
+    style Devices fill:#e0f2f1,stroke:#004d40,stroke-width:3px
+            </div>
+        </div>
+
+        <h2 id="network">2. 🌐 Сетевая схема (Docker Network)</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph TB
+    subgraph "Docker Host"
+        subgraph "Bridge Network: cbackup_network"
+            direction TB
+            
+            Nginx[nginx:alpine<br/>Port: 80<br/>Exposed: 8080:80]
+            
+            Web[PHP-FPM Container<br/>Port: 9000<br/>Yii2 Application]
+            
+            Worker[Java Container<br/>Spring Boot<br/>SSH Shell: 8437]
+            
+            DB[(MySQL 8.0<br/>Port: 3306<br/>Not Exposed)]
+            
+            Redis[(Redis 7-alpine<br/>Port: 6379<br/>Not Exposed)]
+        end
+        
+        SharedVol[Shared Volume<br/>core/bin/<br/>application.properties]
+    end
+    
+    Internet[🌍 Интернет]
+    NetworkDevices[🌐 Сетевое оборудование]
+    
+    Internet -->|:8080 HTTP| Nginx
+    Internet -->|:443 HTTPS| Nginx
+    Nginx -->|FastCGI :9000| Web
+    Web -->|MySQL :3306| DB
+    Web -->|Redis :6379| Redis
+    Web -->|HTTP REST API| Worker
+    Worker -->|MySQL JDBC :3306| DB
+    Worker -->|SSH/Telnet/SNMP| NetworkDevices
+    
+    Web -.-> SharedVol
+    Worker -.-> SharedVol
+    
+    style Internet fill:#e3f2fd,stroke:#0277bd,stroke-width:3px
+    style Nginx fill:#fff9c4,stroke:#f57f17,stroke-width:3px
+    style Web fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
+    style Worker fill:#ffe0b2,stroke:#e65100,stroke-width:3px
+    style DB fill:#e1bee7,stroke:#7b1fa2,stroke-width:3px
+    style Redis fill:#ffcdd2,stroke:#c62828,stroke-width:3px
+    style NetworkDevices fill:#b2dfdb,stroke:#00695c,stroke-width:3px
+    style SharedVol fill:#f8bbd0,stroke:#c2185b,stroke-width:3px
+            </div>
+        </div>
+
+        <h2 id="sequence">3. 🔄 Последовательность выполнения задачи бэкапа</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+sequenceDiagram
+    participant User as 👤 Пользователь
+    participant Nginx as 🌐 NGINX
+    participant Web as 🐘 Web (PHP)
+    participant DB as 🗄️ MySQL
+    participant Worker as ☕ Worker (Java)
+    participant Device as 🌐 Устройство
+    
+    Note over User,Device: 1. Создание задачи через веб-интерфейс
+    User->>Nginx: HTTP POST /index.php?r=task/create
+    Nginx->>Web: FastCGI
+    Web->>DB: INSERT INTO tasks
+    DB-->>Web: Success
+    Web-->>Nginx: Response
+    Nginx-->>User: Redirect
+    
+    Note over Worker,Device: 2. Планировщик получает задачу
+    Worker->>DB: SELECT tasks WHERE schedule_time = NOW()
+    DB-->>Worker: Task list
+    
+    Note over Worker,Web: 3. Получение конфигурации
+    Worker->>Web: HTTP GET /index.php?v1/core/get-config
+    Web->>DB: SELECT config
+    DB-->>Web: Config data
+    Web-->>Worker: JSON config
+    
+    Note over Worker,Device: 4. Выполнение бэкапа
+    Worker->>Device: SSH/Telnet Connect
+    Device-->>Worker: Connected
+    Worker->>Device: Execute backup commands
+    Device-->>Worker: Configuration data
+    
+    Note over Worker,DB: 5. Сохранение результата
+    Worker->>DB: INSERT INTO backup_data
+    DB-->>Worker: Success
+    
+    Note over Worker,Web: 6. Отправка логов
+    Worker->>Web: HTTP POST /index.php?v1/core/set-log
+    Web->>DB: INSERT INTO logs
+    DB-->>Worker: OK
+            </div>
+        </div>
+
+        <h2 id="components">4. 📊 Схема компонентов приложения</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph LR
+    subgraph "Web Layer (PHP)"
+        A[Yii2 Framework]
+        B[Controllers]
+        C[Models]
+        D[Components]
+        E[Views]
+    end
+    
+    subgraph "Worker Layer (Java)"
+        F[Spring Boot]
+        G[Scheduler]
+        H[Workers]
+        I[API Client]
+    end
+    
+    subgraph "Data Layer"
+        J[(MySQL)]
+        K[(Redis)]
+    end
+    
+    subgraph "External"
+        L[Network Devices]
+    end
+    
+    A --> B
+    A --> C
+    A --> D
+    A --> E
+    B --> C
+    D --> J
+    D --> K
+    C --> J
+    
+    F --> G
+    F --> H
+    F --> I
+    G --> J
+    H --> L
+    I --> B
+    
+    style A fill:#4caf50,stroke:#1b5e20,stroke-width:3px
+    style F fill:#ff9800,stroke:#e65100,stroke-width:3px
+    style J fill:#9c27b0,stroke:#4a148c,stroke-width:3px
+    style K fill:#f44336,stroke:#b71c1c,stroke-width:3px
+            </div>
+        </div>
+
+        <h2 id="ports">5. 🔌 Схема портов и подключений</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph TB
+    subgraph "External Ports"
+        EP1[8080 - HTTP]
+        EP2[443 - HTTPS]
+    end
+    
+    subgraph "Internal Ports"
+        IP1[80 - NGINX]
+        IP2[9000 - PHP-FPM]
+        IP3[3306 - MySQL]
+        IP4[6379 - Redis]
+        IP5[8437 - SSH Shell]
+    end
+    
+    subgraph "Services"
+        S1[NGINX]
+        S2[Web PHP]
+        S3[MySQL]
+        S4[Redis]
+        S5[Worker Java]
+    end
+    
+    EP1 --> IP1
+    EP2 --> IP1
+    IP1 --> IP2
+    IP2 --> IP3
+    IP2 --> IP4
+    IP3 --> S3
+    IP4 --> S4
+    IP2 -->|API| S5
+    S5 --> IP3
+    S5 --> IP5
+    
+    style EP1 fill:#ff9800,stroke:#e65100,stroke-width:3px
+    style EP2 fill:#ff9800,stroke:#e65100,stroke-width:3px
+    style IP1 fill:#4caf50,stroke:#1b5e20,stroke-width:3px
+    style IP2 fill:#2196f3,stroke:#0d47a1,stroke-width:3px
+    style IP3 fill:#9c27b0,stroke:#4a148c,stroke-width:3px
+    style IP4 fill:#f44336,stroke:#b71c1c,stroke-width:3px
+    style IP5 fill:#ff5722,stroke:#bf360c,stroke-width:3px
+            </div>
+        </div>
+
+        <h2 id="database">6. 🗄️ Схема базы данных</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+erDiagram
+    CONFIG ||--o{ TASKS : "configures"
+    USERS ||--o{ LOGS : "creates"
+    NODES ||--o{ TASKS : "has"
+    TASKS ||--o{ SCHEDULES : "scheduled_by"
+    TASKS ||--o{ LOG_NODE : "logs_to"
+    CREDENTIALS ||--o{ NODES : "authenticates"
+    
+    CONFIG {
+        string key PK
+        string value
+    }
+    
+    USERS {
+        int id PK
+        string username
+        string password
+        string email
+    }
+    
+    NODES {
+        int id PK
+        string ip
+        string vendor
+        string model
+        int credential_id FK
+    }
+    
+    TASKS {
+        int id PK
+        string name
+        string type
+        string put
+    }
+    
+    SCHEDULES {
+        int id PK
+        int task_id FK
+        string cron
+        int node_id FK
+    }
+    
+    CREDENTIALS {
+        int id PK
+        string ssh_login
+        string ssh_password
+    }
+    
+    LOGS {
+        int id PK
+        int user_id FK
+        string action
+        timestamp created_at
+    }
+    
+    LOG_NODE {
+        int id PK
+        int task_id FK
+        int node_id FK
+        string status
+    }
+            </div>
+        </div>
+
+        <h2 id="docker">7. 📦 Схема Docker Compose</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph TB
+    subgraph "docker-compose.yml"
+        DC[Docker Compose]
+    end
+    
+    subgraph "Services"
+        NGINX_SVC[nginx:alpine]
+        WEB_SVC[web: custom build]
+        WORKER_SVC[worker: custom build]
+        DB_SVC[mysql:8.0]
+        REDIS_SVC[redis:7-alpine]
+    end
+    
+    subgraph "Volumes"
+        DB_VOL[db_data]
+        REDIS_VOL[redis_data]
+        WEB_RUNTIME[web_runtime]
+        SHARED_BIN[core/bin]
+    end
+    
+    subgraph "Network"
+        NET[cbackup_network<br/>driver: bridge]
+    end
+    
+    DC --> NGINX_SVC
+    DC --> WEB_SVC
+    DC --> WORKER_SVC
+    DC --> DB_SVC
+    DC --> REDIS_SVC
+    
+    NGINX_SVC --> NET
+    WEB_SVC --> NET
+    WORKER_SVC --> NET
+    DB_SVC --> NET
+    REDIS_SVC --> NET
+    
+    DB_SVC --> DB_VOL
+    REDIS_SVC --> REDIS_VOL
+    WEB_SVC --> WEB_RUNTIME
+    WEB_SVC --> SHARED_BIN
+    WORKER_SVC --> SHARED_BIN
+    
+    style DC fill:#2196f3,stroke:#0d47a1,stroke-width:3px
+    style NET fill:#4caf50,stroke:#1b5e20,stroke-width:3px
+    style DB_VOL fill:#9c27b0,stroke:#4a148c,stroke-width:3px
+    style REDIS_VOL fill:#f44336,stroke:#b71c1c,stroke-width:3px
+    style SHARED_BIN fill:#ff9800,stroke:#e65100,stroke-width:3px
+            </div>
+        </div>
+
+        <div class="warning-box">
+            <strong>💡 Совет:</strong> Для экспорта диаграмм в PNG/SVG используйте браузерное расширение для Mermaid 
+            или онлайн-сервисы типа mermaid.live
+        </div>
+
+        <div class="legend">
+            <h3>🎨 Легенда цветов</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e1f5ff;"></div>
+                <span>Пользователь</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fff4e1;"></div>
+                <span>NGINX</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e8f5e9;"></div>
+                <span>Web (PHP)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fff3e0;"></div>
+                <span>Worker (Java)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f3e5f5;"></div>
+                <span>MySQL</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffebee;"></div>
+                <span>Redis</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e0f2f1;"></div>
+                <span>Сетевое оборудование</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                diagramMarginX: 50,
+                diagramMarginY: 10,
+                actorMargin: 50,
+                width: 150,
+                height: 65,
+                boxMargin: 10,
+                boxTextMargin: 5,
+                noteMargin: 10,
+                messageMargin: 35
+            },
+            er: {
+                fontSize: 14
+            }
+        });
+    </script>
+</body>
+</html>
