@@ -20,6 +20,12 @@ use yii\db\TableSchema;
 class MysqlSchema extends BaseSchema
 {
     /**
+     * Track loading tables to prevent infinite recursion
+     * @var array
+     */
+    private static $loadingTables = [];
+    
+    /**
      * Returns the metadata for the specified table.
      * Override to check cache for null values and validate table existence.
      * 
@@ -29,6 +35,12 @@ class MysqlSchema extends BaseSchema
      */
     public function getTableSchema($name, $refresh = false)
     {
+        // Prevent infinite recursion - if we're already loading this table, return null
+        if (isset(self::$loadingTables[$name])) {
+            // Already loading this table - return null to break recursion
+            return null;
+        }
+        
         // Simplified approach: use parent's caching logic but with our loadTableSchema
         // This avoids extra checks that slow down the application
         // If refresh is requested, bypass cache
@@ -36,9 +48,17 @@ class MysqlSchema extends BaseSchema
             return $this->loadTableSchema($name);
         }
         
-        // Use parent's caching mechanism - it's already optimized
-        // We just override loadTableSchema to fix constraint_name issues
-        return parent::getTableSchema($name, $refresh);
+        // Mark table as loading
+        self::$loadingTables[$name] = true;
+        
+        try {
+            // Use parent's caching mechanism - it's already optimized
+            // We just override loadTableSchema to fix constraint_name issues
+            return parent::getTableSchema($name, $refresh);
+        } finally {
+            // Always unmark table when done (even on exception)
+            unset(self::$loadingTables[$name]);
+        }
     }
     
     /**
@@ -125,45 +145,16 @@ class MysqlSchema extends BaseSchema
                         }
                         return $table;
                     } else {
-                        // Table exists but we can't load schema - try to use findColumns method
-                        // This uses Yii2's built-in method which properly handles column loading
-                        try {
-                            $table = new TableSchema();
-                            $table->fullName = $name;
-                            $table->name = $name;
-                            $table->foreignKeys = [];
-                            
-                            // Use findColumns method which properly loads column schema
-                            $columns = $this->findColumns($table);
-                            if (!empty($columns)) {
-                                $table->columns = $columns;
-                            }
-                            
-                            // Load primary key
-                            try {
-                                $table->primaryKey = $this->findPrimaryKey($table);
-                            } catch (\Throwable $pkEx) {
-                                // Ignore if can't find primary key
-                            }
-                            
-                            // Load foreign keys safely
-                            try {
-                                $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
-                            } catch (\Exception $fkEx) {
-                                $table->foreignKeys = [];
-                            }
-                            
-                            return $table;
-                        } catch (\Throwable $manualEx) {
-                            // If manual loading also fails, return minimal schema
-                            // At least return non-null so application knows table exists
-                            $table = new TableSchema();
-                            $table->fullName = $name;
-                            $table->name = $name;
-                            $table->foreignKeys = [];
-                            $table->columns = [];
-                            return $table;
-                        }
+                        // Table exists but we can't load schema - return minimal schema immediately
+                        // DO NOT use findColumns() or findPrimaryKey() as they may call getTableSchema()
+                        // recursively for foreign keys, causing infinite loop
+                        $table = new TableSchema();
+                        $table->fullName = $name;
+                        $table->name = $name;
+                        $table->foreignKeys = [];
+                        $table->columns = [];
+                        $table->primaryKey = [];
+                        return $table;
                     }
                 }
             } catch (\Throwable $checkEx) {
