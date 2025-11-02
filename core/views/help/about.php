@@ -143,17 +143,23 @@ $this->title = Yii::t('app', 'About');
                             <td><?= Yii::t('help', 'Java version') ?></td>
                             <td colspan="2">
                                 <?php
-                                    $java = \app\models\Sysinfo::getJavaVersion();
-                                    if (is_null($java)) {
-                                        // Check if we're in Docker environment
-                                        $isDocker = getenv('DOCKER_CONTAINER') === 'true' || getenv('container') === 'docker';
-                                        if ($isDocker) {
-                                            echo '<span class="text-info">' . \Yii::t('app', 'Java worker runs in separate Docker container (cbackup_worker)') . '</span>';
+                                    // Safe version - wrap in try-catch to prevent hanging
+                                    try {
+                                        @set_time_limit(1); // 1 second max for Java version check
+                                        $java = \app\models\Sysinfo::getJavaVersion();
+                                        if (is_null($java)) {
+                                            // Check if we're in Docker environment
+                                            $isDocker = getenv('DOCKER_CONTAINER') === 'true' || getenv('container') === 'docker';
+                                            if ($isDocker) {
+                                                echo '<span class="text-info">' . \Yii::t('app', 'Java worker runs in separate Docker container (cbackup_worker)') . '</span>';
+                                            } else {
+                                                echo '<span class="text-red">' . \Yii::t('app', 'not found') . '</span>';
+                                            }
                                         } else {
-                                            echo '<span class="text-red">' . \Yii::t('app', 'not found') . '</span>';
+                                            echo htmlspecialchars($java);
                                         }
-                                    } else {
-                                        echo $java;
+                                    } catch (\Throwable $e) {
+                                        echo '<span class="text-yellow">N/A (timeout or error)</span>';
                                     }
                                 ?>
                             </td>
@@ -162,8 +168,14 @@ $this->title = Yii::t('app', 'About');
                             <td><?= Yii::t('help', 'Git version') ?></td>
                             <td colspan="2">
                                 <?php
-                                    $git = \app\models\Sysinfo::getGitVersion();
-                                    echo (is_null($git)) ? '<span class="text-red">' . \Yii::t('app', 'not found') . '</span>' : $git;
+                                    // Safe version - wrap in try-catch to prevent hanging
+                                    try {
+                                        @set_time_limit(1); // 1 second max for Git version check
+                                        $git = \app\models\Sysinfo::getGitVersion();
+                                        echo (is_null($git)) ? '<span class="text-red">' . \Yii::t('app', 'not found') . '</span>' : htmlspecialchars($git);
+                                    } catch (\Throwable $e) {
+                                        echo '<span class="text-yellow">N/A (timeout or error)</span>';
+                                    }
                                 ?>
                             </td>
                         </tr>

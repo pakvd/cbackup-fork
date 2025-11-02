@@ -210,26 +210,56 @@ class HelpController extends Controller
             try {
                 error_log("Step 19.2: Calling render() method");
                 
-                // CRITICAL: Render content first, then wrap in layout using renderContent
-                // This avoids recursion issues with render()
-                error_log("Step 19.3: Rendering content with renderPartial");
+                // CRITICAL: Use direct file include instead of renderPartial to avoid Yii2 rendering system
+                // This completely bypasses any potential DB queries in Yii's rendering
+                error_log("Step 19.3: Rendering content directly from file");
                 
                 // Ensure schema cache is still disabled during render
                 if (isset($app->db)) {
                     $app->db->enableSchemaCache = false;
                 }
                 
-                // First render the content without layout
-                $content = $this->renderPartial('about', [
-                    'phpinfo'      => $phpinfo,
-                    'SERVER'       => $_SERVER,
-                    'perms'        => $perms,
-                    'plugins'      => $safePlugins,
-                    'extensions'   => $extensions,
-                    'dbVersion'    => $dbVersion,
-                    'dbDriverName' => $dbDriverName,
-                ], true); // true = return as string
-                error_log("Step 19.4: Content rendered");
+                // Render content by directly including the view file
+                // This bypasses Yii2's renderPartial which might trigger DB queries
+                $viewFile = $this->getViewPath() . DIRECTORY_SEPARATOR . 'help' . DIRECTORY_SEPARATOR . 'about.php';
+                error_log("Step 19.3.1: View file: " . $viewFile);
+                
+                if (file_exists($viewFile)) {
+                    error_log("Step 19.3.2: View file exists, starting output buffering");
+                    ob_start();
+                    try {
+                        // Extract variables for the view
+                        extract([
+                            'phpinfo'      => $phpinfo,
+                            'SERVER'       => $_SERVER,
+                            'perms'        => $perms,
+                            'plugins'      => $safePlugins,
+                            'extensions'   => $extensions,
+                            'dbVersion'    => $dbVersion,
+                            'dbDriverName' => $dbDriverName,
+                        ], EXTR_SKIP);
+                        
+                        // Include the view file directly
+                        include $viewFile;
+                        $content = ob_get_clean();
+                        error_log("Step 19.4: Content rendered directly from file");
+                    } catch (\Throwable $includeError) {
+                        ob_end_clean();
+                        error_log("Step 19.4 ERROR: " . $includeError->getMessage());
+                        throw $includeError;
+                    }
+                } else {
+                    error_log("Step 19.3.2: View file NOT found, using renderPartial fallback");
+                    $content = $this->renderPartial('about', [
+                        'phpinfo'      => $phpinfo,
+                        'SERVER'       => $_SERVER,
+                        'perms'        => $perms,
+                        'plugins'      => $safePlugins,
+                        'extensions'   => $extensions,
+                        'dbVersion'    => $dbVersion,
+                        'dbDriverName' => $dbDriverName,
+                    ], true);
+                }
                 
                 // Now wrap in layout using renderContent (which uses layout but doesn't call action)
                 error_log("Step 19.5: Wrapping content in layout");
