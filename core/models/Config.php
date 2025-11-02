@@ -471,7 +471,36 @@ class Config extends ActiveRecord
 
         // Only show warning if there are still mismatches after sync attempt
         if (!empty($res)) {
-            \Y::flash('warning', Yii::t('config', 'Mismatched data in application.properties and database for following keys: <b>{0}</b>', join(', ', $res)));
+            // Try one more sync attempt before showing warning
+            if (static::syncApplicationProperties($data)) {
+                // Re-read and re-check one final time
+                $props = @parse_ini_file($file, false, INI_SCANNER_RAW);
+                if (!empty($props)) {
+                    $res = [];
+                    foreach ($data as $key => $value) {
+                        $match = [];
+                        if (preg_match('/^javaScheduler(\w+)$/', $key, $match)) {
+                            $match = array_filter($match);
+                            $match = array_values($match);
+                            $match = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
+                            $pkey  = "sshd.shell.$match";
+                            if (!empty($match)) {
+                                $propValue = isset($props[$pkey]) ? (string)$props[$pkey] : '';
+                                $dbValue = ($value === null || $value === '') ? '' : (string)$value;
+                                
+                                if (!array_key_exists($pkey, $props) || $propValue !== $dbValue) {
+                                    $res[] = $pkey;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Only show warning if there are still mismatches
+            if (!empty($res)) {
+                \Y::flash('warning', Yii::t('config', 'Mismatched data in application.properties and database for following keys: <b>{0}</b>', join(', ', $res)));
+            }
         }
 
     }
