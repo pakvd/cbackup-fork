@@ -21,7 +21,8 @@ return [
 		'mysql' => 'app\components\MysqlSchema',
 	],
 	// Enable schema cache to improve performance and avoid repeated information_schema queries
-	'enableSchemaCache' => !defined('YII_DEBUG') || !YII_DEBUG,
+	// Temporarily disable for debugging - can be re-enabled after fixing schema loading
+	'enableSchemaCache' => false, // !defined('YII_DEBUG') || !YII_DEBUG,
 	'schemaCache' => 'cache',
 	'schemaCacheDuration' => 86400, // 24 hours
 ];

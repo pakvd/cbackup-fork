@@ -103,21 +103,25 @@ class MysqlSchema extends BaseSchema
                         }
                         return $table;
                     } else {
-                        // Table exists but we can't load schema - try to load columns manually
-                        // This ensures we return a valid TableSchema even if parent fails
+                        // Table exists but we can't load schema - try to use findColumns method
+                        // This uses Yii2's built-in method which properly handles column loading
                         try {
                             $table = new TableSchema();
                             $table->fullName = $name;
                             $table->name = $name;
                             $table->foreignKeys = [];
                             
-                            // Try to load columns manually
-                            $columns = $this->db->createCommand("SHOW COLUMNS FROM `{$name}`")->queryAll();
-                            foreach ($columns as $column) {
-                                $col = $this->loadColumnSchema($column);
-                                if ($col !== null) {
-                                    $table->columns[$col->name] = $col;
-                                }
+                            // Use findColumns method which properly loads column schema
+                            $columns = $this->findColumns($table);
+                            if (!empty($columns)) {
+                                $table->columns = $columns;
+                            }
+                            
+                            // Load primary key
+                            try {
+                                $table->primaryKey = $this->findPrimaryKey($table);
+                            } catch (\Throwable $pkEx) {
+                                // Ignore if can't find primary key
                             }
                             
                             // Load foreign keys safely
@@ -130,10 +134,12 @@ class MysqlSchema extends BaseSchema
                             return $table;
                         } catch (\Throwable $manualEx) {
                             // If manual loading also fails, return minimal schema
+                            // At least return non-null so application knows table exists
                             $table = new TableSchema();
                             $table->fullName = $name;
                             $table->name = $name;
                             $table->foreignKeys = [];
+                            $table->columns = [];
                             return $table;
                         }
                     }
