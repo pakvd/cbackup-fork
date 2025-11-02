@@ -132,20 +132,32 @@ services:
     networks:
       - cbackup_network
     # Copy JAR to shared location before starting Java application
-    # Run as root temporarily to ensure write permissions, then switch to appuser
+    # Override ENTRYPOINT to run as root, copy file, then switch to appuser
+    entrypoint: ["/bin/sh", "-c"]
     user: root
     command: >
-      sh -c "
+      "
+      echo '=== Worker container starting ===' &&
+      echo 'Current user:' && whoami &&
+      echo 'Checking /app/app.jar...' &&
+      ls -lh /app/app.jar 2>&1 &&
+      echo 'Creating /shared/bin directory...' &&
       mkdir -p /shared/bin &&
+      echo 'Checking /shared/bin permissions...' &&
+      ls -ld /shared/bin &&
+      echo 'Copying JAR file...' &&
       if [ -f /app/app.jar ]; then
-        cp /app/app.jar /shared/bin/cbackup.jar &&
+        cp -v /app/app.jar /shared/bin/cbackup.jar &&
         chmod 555 /shared/bin/cbackup.jar &&
         FILE_SIZE=$$(stat -c%s /shared/bin/cbackup.jar 2>/dev/null || echo 0) &&
-        echo '✓ Copied cbackup.jar to shared volume (size: '$$FILE_SIZE' bytes)' &&
-        chown appuser:appuser /shared/bin/cbackup.jar || true
+        echo '✓ Successfully copied cbackup.jar (size: '$$FILE_SIZE' bytes)' &&
+        ls -lh /shared/bin/cbackup.jar &&
+        chown appuser:appuser /shared/bin/cbackup.jar 2>&1 || echo 'chown failed (may be OK with volume mount)'
       else
-        echo '⚠ /app/app.jar not found!'
+        echo '✗ ERROR: /app/app.jar not found!' &&
+        ls -la /app/
       fi &&
+      echo 'Switching to appuser and starting Java application...' &&
       cd /app &&
       exec su appuser -c 'java -jar app.jar'
       "
