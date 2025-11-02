@@ -274,11 +274,36 @@ class HelpController extends Controller
                             }
                         });
                         
-                        // Include the view file directly
-                        include $viewFile;
+                        // CRITICAL: Try to include with very strict timeout
+                        // Use pcntl_alarm if available, otherwise rely on set_time_limit
+                        if (function_exists('pcntl_alarm')) {
+                            pcntl_alarm(1); // 1 second alarm
+                        }
+                        
+                        // Create isolated scope for include to prevent variable pollution
+                        $includeContent = function() use ($viewFile, $phpinfo, $SERVER, $perms, $safePlugins, $extensions, $dbVersion, $dbDriverName) {
+                            // Re-extract in isolated scope
+                            extract([
+                                'phpinfo'      => $phpinfo,
+                                'SERVER'       => $SERVER,
+                                'perms'        => $perms,
+                                'plugins'      => $safePlugins,
+                                'extensions'   => $extensions,
+                                'dbVersion'    => $dbVersion,
+                                'dbDriverName' => $dbDriverName,
+                            ], EXTR_SKIP);
+                            
+                            // Include with output buffering in isolated scope
+                            ob_start();
+                            include $viewFile;
+                            return ob_get_clean();
+                        };
+                        
+                        error_log("Step 19.3.4: Calling include function");
+                        $content = $includeContent();
+                        error_log("Step 19.3.5: Include function completed");
                         
                         $includeCompleted = true;
-                        $content = ob_get_clean();
                         error_log("Step 19.4: Content rendered directly from file, length: " . strlen($content));
                     } catch (\Throwable $includeError) {
                         $includeCompleted = true;

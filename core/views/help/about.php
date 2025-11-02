@@ -42,6 +42,11 @@ try {
 } catch (\Throwable $e) {
     // Ignore errors setting breadcrumbs/title - they're not critical
 }
+
+// Log template execution start
+if (function_exists('error_log')) {
+    error_log("=== about.php template START ===");
+}
 ?>
 <div class="row">
     <div class="col-md-12">
