@@ -51,7 +51,8 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/runtime \
     && chmod -R 775 /var/www/html/web/assets \
-    && if [ -f /var/www/html/bin/cbackup.jar ]; then chmod 555 /var/www/html/bin/cbackup.jar; chmod +x /var/www/html/bin/cbackup.jar; fi \
+    && if [ -f /var/www/html/bin/cbackup.jar ]; then chmod 555 /var/www/html/bin/cbackup.jar; fi \
+    && if [ -f /var/www/html/bin/application.properties ]; then chmod 664 /var/www/html/bin/application.properties; chmod -x /var/www/html/bin/application.properties; fi \
     && if [ -f /var/www/html/yii.bat ]; then chmod 444 /var/www/html/yii.bat; fi \
     && if [ -f /var/www/html/yii ]; then chmod 644 /var/www/html/yii; chmod -x /var/www/html/yii; fi
 

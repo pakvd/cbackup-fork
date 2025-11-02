@@ -131,6 +131,15 @@ chmod 775 /var/www/html || true  # Allow write to root directory for install.loc
 mkdir -p /var/www/html/modules/cds/content
 chmod -R 775 /var/www/html/modules/cds/content 2>/dev/null || true
 
+# Set correct permissions for bin files
+if [ -f "/var/www/html/bin/cbackup.jar" ]; then
+    chmod 555 /var/www/html/bin/cbackup.jar 2>/dev/null || true
+fi
+if [ -f "/var/www/html/bin/application.properties" ]; then
+    chmod 664 /var/www/html/bin/application.properties 2>/dev/null || true
+    chmod -x /var/www/html/bin/application.properties 2>/dev/null || true
+fi
+
 # Try to change ownership if possible (may fail with volume mounts, but try anyway)
 chown -R www-data:www-data /var/www/html/runtime 2>/dev/null || true
 chown -R www-data:www-data /var/www/html/web/assets 2>/dev/null || true
