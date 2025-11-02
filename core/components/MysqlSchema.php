@@ -30,19 +30,26 @@ class MysqlSchema extends BaseSchema
     public function loadTableSchema($name)
     {
         // Set up error handler to catch "Undefined array key" errors
+        // Use E_ALL to catch all types of errors, not just warnings/notices
         $errorOccurred = false;
         $errorMessage = '';
+        $previousErrorHandler = null;
         
         // Capture errors/warnings that might be thrown
-        set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$errorOccurred, &$errorMessage) {
+        $previousErrorHandler = set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$errorOccurred, &$errorMessage, &$previousErrorHandler) {
             if (strpos($errstr, 'constraint_name') !== false || 
-                strpos($errstr, 'Undefined array key') !== false) {
+                strpos($errstr, 'Undefined array key') !== false ||
+                strpos($errstr, 'constraint_name') !== false) {
                 $errorOccurred = true;
                 $errorMessage = $errstr;
                 return true; // Suppress error
             }
+            // Call previous error handler if exists
+            if ($previousErrorHandler && is_callable($previousErrorHandler)) {
+                return call_user_func($previousErrorHandler, $errno, $errstr, $errfile, $errline);
+            }
             return false; // Let other errors through
-        }, E_WARNING | E_NOTICE);
+        }, E_ALL & ~E_DEPRECATED);
         
         try {
             // Try to load table using parent method
@@ -100,6 +107,37 @@ class MysqlSchema extends BaseSchema
             }
             
             throw $e;
+        } catch (\Error $e) {
+            // Restore error handler
+            restore_error_handler();
+            
+            // PHP 8.0+ throws Error for "Undefined array key", not Exception
+            if ($errorOccurred || 
+                strpos($e->getMessage(), 'constraint_name') !== false || 
+                strpos($e->getMessage(), 'Undefined array key') !== false) {
+                
+                // Try one more time with full error suppression
+                try {
+                    set_error_handler(function() { return true; }, E_ALL);
+                    $table = parent::loadTableSchema($name);
+                    restore_error_handler();
+                    
+                    if ($table !== null) {
+                        // Load foreign keys safely
+                        try {
+                            $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
+                        } catch (\Exception $fkEx) {
+                            $table->foreignKeys = [];
+                        }
+                        return $table;
+                    }
+                } catch (\Throwable $e2) {
+                    // If still fails, return null (table might not exist)
+                    return null;
+                }
+            }
+            
+            throw $e;
         }
     }
     
@@ -114,11 +152,35 @@ class MysqlSchema extends BaseSchema
      */
     protected function loadTableConstraints($table, $type)
     {
+        // Override to safely handle constraint_name errors
+        // Use error handler to catch "Undefined array key" warnings
+        $errorOccurred = false;
+        
+        set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$errorOccurred) {
+            if (strpos($errstr, 'constraint_name') !== false || 
+                strpos($errstr, 'Undefined array key') !== false) {
+                $errorOccurred = true;
+                return true; // Suppress error
+            }
+            return false;
+        }, E_WARNING | E_NOTICE);
+        
         try {
-            return parent::loadTableConstraints($table, $type);
+            $result = parent::loadTableConstraints($table, $type);
+            restore_error_handler();
+            
+            // If there was an error, return empty array
+            if ($errorOccurred) {
+                return [];
+            }
+            
+            return $result;
         } catch (\Exception $e) {
+            restore_error_handler();
+            
             // If error contains constraint_name, return empty array
-            if (strpos($e->getMessage(), 'constraint_name') !== false || 
+            if ($errorOccurred || 
+                strpos($e->getMessage(), 'constraint_name') !== false || 
                 strpos($e->getMessage(), 'Undefined array key') !== false) {
                 return [];
             }
