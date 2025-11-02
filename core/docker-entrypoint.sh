@@ -155,17 +155,19 @@ fi
 # This ensures settings are applied even without rebuilding the image
 if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
     echo "=== Updating PHP-FPM pool configuration ==="
-    # Update pm.max_children if it's still 5 or less
-    if grep -q "^pm.max_children = 5$" /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || \
-       grep -q "^pm.max_children =[[:space:]]*[0-5]$" /usr/local/etc/php-fpm.d/www.conf 2>/dev/null; then
-        sed -i 's/^pm.max_children =.*/pm.max_children = 20/' /usr/local/etc/php-fpm.d/www.conf
-        echo "Updated pm.max_children to 20"
+    # Update pm.max_children if it's less than 40
+    if grep -q "^pm.max_children =[[:space:]]*[0-3][0-9]$" /usr/local/etc/php-fpm.d/www.conf 2>/dev/null; then
+        CURRENT_MAX=$(grep "^pm.max_children" /usr/local/etc/php-fpm.d/www.conf | head -1 | sed 's/.*= *\([0-9]*\).*/\1/')
+        if [ "$CURRENT_MAX" -lt 40 ] 2>/dev/null; then
+            sed -i 's/^pm.max_children =.*/pm.max_children = 40/' /usr/local/etc/php-fpm.d/www.conf
+            echo "Updated pm.max_children to 40"
+        fi
     fi
-    # Update other settings
-    sed -i 's/^pm.start_servers =.*/pm.start_servers = 5/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
-    sed -i 's/^pm.min_spare_servers =.*/pm.min_spare_servers = 3/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
-    sed -i 's/^pm.max_spare_servers =.*/pm.max_spare_servers = 10/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
-    sed -i 's/^request_terminate_timeout =.*/request_terminate_timeout = 60s/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
+    # Update other settings to higher values for better performance
+    sed -i 's/^pm.start_servers =.*/pm.start_servers = 10/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
+    sed -i 's/^pm.min_spare_servers =.*/pm.min_spare_servers = 5/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
+    sed -i 's/^pm.max_spare_servers =.*/pm.max_spare_servers = 20/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
+    sed -i 's/^request_terminate_timeout =.*/request_terminate_timeout = 120s/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
 fi
 
 # Always ensure we can start PHP-FPM
