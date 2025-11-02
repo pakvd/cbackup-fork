@@ -39,6 +39,7 @@ services:
       DB_USER: ${MYSQL_USER:-cbackup}
       DB_PASSWORD: ${MYSQL_PASSWORD:-cbackup_password}
       PHP_TIMEZONE: ${PHP_TIMEZONE:-UTC}
+      ENABLE_OPCACHE: ${ENABLE_OPCACHE:-true}
       DOCKER_CONTAINER: "true"
       container: "docker"
     volumes:

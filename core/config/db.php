@@ -1,10 +1,7 @@
 <?php
 
-// Load custom Schema class before using it
-$schemaClassFile = __DIR__ . '/../components/MysqlSchema.php';
-if (file_exists($schemaClassFile)) {
-    require_once $schemaClassFile;
-}
+// Note: MysqlSchema class will be autoloaded by Composer when needed (after Yii2 is loaded)
+// We don't require it here because install/index.php loads this file before Yii2 is loaded
 
 // Read database configuration from environment variables (Docker) or use defaults
 $dbHost = getenv('DB_HOST') ?: 'db';

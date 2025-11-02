@@ -57,9 +57,15 @@ RUN chown -R www-data:www-data /var/www/html \
 # This is used by older Yii2 versions and doesn't affect functionality in PHP 8.0+
 RUN echo "error_reporting = E_ALL & ~E_DEPRECATED" > /usr/local/etc/php/conf.d/deprecated.ini
 
-# Disable opcache for development to ensure code changes are applied immediately
-# In production, you can enable opcache but should restart PHP-FPM after code changes
-RUN echo "opcache.enable=0" > /usr/local/etc/php/conf.d/opcache.ini || true
+# Configure opcache - enable by default for production
+# Set ENABLE_OPCACHE=false in docker-compose.yml to disable for development
+RUN echo "opcache.enable=1" > /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.interned_strings_buffer=16" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.revalidate_freq=2" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.fast_shutdown=1" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini || true
 
 # Update PHP-FPM pool configuration to increase process limit
 # Modify the default www.conf file directly to ensure settings are applied

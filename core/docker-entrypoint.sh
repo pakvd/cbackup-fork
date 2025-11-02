@@ -134,6 +134,16 @@ else
     chmod 775 /var/www/html 2>/dev/null || true
 fi
 
+# Configure opcache based on environment variable (default: enabled for production)
+ENABLE_OPCACHE=${ENABLE_OPCACHE:-true}
+if [ "$ENABLE_OPCACHE" = "false" ]; then
+    echo "=== Disabling opcache for development ==="
+    echo "opcache.enable=0" > /usr/local/etc/php/conf.d/opcache.ini || true
+else
+    echo "=== Opcache is enabled for production (optimal performance) ==="
+    # Opcache is already configured in Dockerfile
+fi
+
 # Update PHP-FPM pool configuration if not already set
 # This ensures settings are applied even without rebuilding the image
 if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
