@@ -12,8 +12,10 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./core/install/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
-    ports:
-      - "${MYSQL_PORT:-3306}:3306"
+    # Security: MySQL port should NOT be exposed to host in production
+    # Uncomment next line only for development/debugging
+    # ports:
+    #   - "${MYSQL_PORT:-3306}:3306"
     networks:
       - cbackup_network
     healthcheck:
