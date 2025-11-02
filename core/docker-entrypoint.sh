@@ -132,8 +132,33 @@ chmod 775 /var/www/html || true  # Allow write to root directory for install.loc
 mkdir -p /var/www/html/modules/cds/content
 chmod -R 775 /var/www/html/modules/cds/content 2>/dev/null || true
 
-# Ensure bin directory exists
+# Ensure bin directory exists with proper permissions
 mkdir -p /var/www/html/bin
+chmod 755 /var/www/html/bin
+
+# Create application.properties if it doesn't exist and database is ready
+# This will be synced properly when Config model loads, but we create it with defaults here
+if [ ! -f "/var/www/html/bin/application.properties" ]; then
+    cat > /var/www/html/bin/application.properties << 'EOF'
+# SSH Daemon Shell Configuration
+sshd.shell.port=8437
+sshd.shell.enabled=false
+sshd.shell.username=cbadmin
+sshd.shell.password=
+sshd.shell.host=localhost
+sshd.shell.auth.authType=SIMPLE
+sshd.shell.prompt.title=cbackup
+
+# Spring Configuration
+spring.main.banner-mode=off
+
+# cBackup Configuration
+cbackup.scheme=http
+cbackup.site=http://web/index.php
+cbackup.token=
+EOF
+    chmod 644 /var/www/html/bin/application.properties
+fi
 
 # Check cbackup.jar - worker container should have copied it already (web depends on worker)
 # Worker copies to ./core/bin/cbackup.jar which is mounted as /var/www/html/bin/cbackup.jar

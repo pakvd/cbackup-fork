@@ -49,6 +49,9 @@ $config = [
         'config' => [
             'class' => 'app\commands\ConfigController',
         ],
+        'sync-properties' => [
+            'class' => 'app\commands\SyncPropertiesController',
+        ],
     ],
 
     'modules' => [

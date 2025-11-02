@@ -276,10 +276,32 @@ class ConfigController extends Controller
                     } else {
                         $file = Yii::$app->basePath.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'application.properties';
                         $dir  = dirname($file);
-                        $message = Yii::t('config', 'Failed to synchronize. Directory writable: {dir}, File writable: {file}', [
-                            'dir' => is_writable($dir) ? 'yes' : 'no',
-                            'file' => file_exists($file) && is_writable($file) ? 'yes' : 'no'
-                        ]);
+                        
+                        // Try to fix permissions automatically
+                        if (is_dir($dir) && !is_writable($dir)) {
+                            @chmod($dir, 0755);
+                        }
+                        if (file_exists($file) && !is_writable($file)) {
+                            @chmod($file, 0644);
+                            // Try sync again after fixing permissions
+                            $result = Config::syncApplicationProperties($data);
+                            if ($result) {
+                                $status = 'success';
+                                $message = Yii::t('config', 'application.properties synchronized successfully after fixing permissions');
+                            }
+                        }
+                        
+                        if ($status !== 'success') {
+                            $dirExists = is_dir($dir) ? 'yes' : 'no';
+                            $dirWritable = is_dir($dir) && is_writable($dir) ? 'yes' : 'no';
+                            $fileExists = file_exists($file) ? 'yes' : 'no';
+                            $fileWritable = file_exists($file) && is_writable($file) ? 'yes' : 'no';
+                            
+                            $message = Yii::t('config', 'Failed to synchronize. Please run on server: chmod 755 {dir} && chmod 644 {file}', [
+                                'dir' => $dir,
+                                'file' => $file
+                            ]);
+                        }
                     }
                 }
 

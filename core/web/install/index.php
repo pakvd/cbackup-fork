@@ -824,6 +824,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (!$success) {
                 $errors[] = 'Failed to create install.lock file. Please check file permissions.';
             } else {
+                // Create application.properties file automatically after installation
+                try {
+                    $binDir = $basePath . '/bin';
+                    $propsFile = $binDir . '/application.properties';
+                    
+                    // Ensure bin directory exists
+                    if (!is_dir($binDir)) {
+                        @mkdir($binDir, 0755, true);
+                    }
+                    
+                    // Get javaScheduler values from database
+                    $javaSchedulerPort = '';
+                    $javaSchedulerUsername = '';
+                    $javaSchedulerPassword = '';
+                    
+                    try {
+                        $pdo->exec("USE `{$dbName}`");
+                        $stmt = $pdo->query("SELECT `key`, `value` FROM `config` WHERE `key` IN ('javaSchedulerPort', 'javaSchedulerUsername', 'javaSchedulerPassword')");
+                        $configRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        foreach ($configRows as $row) {
+                            if ($row['key'] === 'javaSchedulerPort') {
+                                $javaSchedulerPort = $row['value'] ?: '8437';
+                            } elseif ($row['key'] === 'javaSchedulerUsername') {
+                                $javaSchedulerUsername = $row['value'] ?: 'cbadmin';
+                            } elseif ($row['key'] === 'javaSchedulerPassword') {
+                                $javaSchedulerPassword = $row['value'] ?: '';
+                            }
+                        }
+                    } catch (Exception $e) {
+                        // Use defaults if DB query fails
+                        $javaSchedulerPort = '8437';
+                        $javaSchedulerUsername = 'cbadmin';
+                        $javaSchedulerPassword = '';
+                    }
+                    
+                    // Create application.properties file
+                    $content = "# SSH Daemon Shell Configuration\n"
+                        . "sshd.shell.port={$javaSchedulerPort}\n"
+                        . "sshd.shell.enabled=false\n"
+                        . "sshd.shell.username={$javaSchedulerUsername}\n"
+                        . "sshd.shell.password={$javaSchedulerPassword}\n"
+                        . "sshd.shell.host=localhost\n"
+                        . "sshd.shell.auth.authType=SIMPLE\n"
+                        . "sshd.shell.prompt.title=cbackup\n"
+                        . "\n"
+                        . "# Spring Configuration\n"
+                        . "spring.main.banner-mode=off\n"
+                        . "\n"
+                        . "# cBackup Configuration\n"
+                        . "cbackup.scheme=http\n"
+                        . "cbackup.site=http://web/index.php\n"
+                        . "cbackup.token=\n";
+                    
+                    if (@file_put_contents($propsFile, $content)) {
+                        @chmod($propsFile, 0644);
+                    }
+                    
+                    // Set proper permissions on directory
+                    if (is_dir($binDir)) {
+                        @chmod($binDir, 0755);
+                    }
+                } catch (Exception $e) {
+                    // If creation fails, it's not critical - user can sync manually later
+                    // Just log silently and continue
+                }
+                
                 header("Location: /");
                 exit();
             }

@@ -39,6 +39,40 @@ else
     echo "⚠ yii not found"
 fi
 
+# Ensure bin directory exists
+if [ ! -d "$CORE_DIR/bin" ]; then
+    mkdir -p "$CORE_DIR/bin"
+    echo "✓ Created bin directory"
+fi
+
+# Set permissions for bin directory
+if chmod 755 "$CORE_DIR/bin" 2>/dev/null; then
+    echo "✓ Set permissions for bin directory (755)"
+fi
+
+# Create application.properties if it doesn't exist
+if [ ! -f "$CORE_DIR/bin/application.properties" ]; then
+    cat > "$CORE_DIR/bin/application.properties" << 'EOF'
+# SSH Daemon Shell Configuration
+sshd.shell.port=8437
+sshd.shell.enabled=false
+sshd.shell.username=cbadmin
+sshd.shell.password=
+sshd.shell.host=localhost
+sshd.shell.auth.authType=SIMPLE
+sshd.shell.prompt.title=cbackup
+
+# Spring Configuration
+spring.main.banner-mode=off
+
+# cBackup Configuration
+cbackup.scheme=http
+cbackup.site=http://web/index.php
+cbackup.token=
+EOF
+    echo "✓ Created application.properties with default values"
+fi
+
 # Set permissions for bin files (if they exist on host)
 # These files may be owned by root (from worker container), so we try to change ownership first
 if [ -f "$CORE_DIR/bin/cbackup.jar" ]; then
@@ -67,8 +101,8 @@ if [ -f "$CORE_DIR/bin/application.properties" ]; then
         sudo chown "$CURRENT_USER:$CURRENT_USER" "$CORE_DIR/bin/application.properties" 2>/dev/null || true
     fi
     # Try to set permissions (suppress stderr - permission errors are expected if file is owned by root)
-    if chmod 664 "$CORE_DIR/bin/application.properties" 2>/dev/null && chmod -x "$CORE_DIR/bin/application.properties" 2>/dev/null; then
-        echo "✓ Set permissions for application.properties (664, non-executable)"
+    if chmod 644 "$CORE_DIR/bin/application.properties" 2>/dev/null && chmod -x "$CORE_DIR/bin/application.properties" 2>/dev/null; then
+        echo "✓ Set permissions for application.properties (644, non-executable)"
     else
         # File may be owned by root from container - this is OK, entrypoint will fix it
         echo "⚠ Skipped application.properties (permission denied - will be set by entrypoint script in container)"

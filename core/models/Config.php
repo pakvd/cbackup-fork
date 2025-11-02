@@ -328,16 +328,30 @@ class Config extends ActiveRecord
         }
 
         // Write the updated content
-        // Check if directory is writable
-        if (!is_writable($dir) && !is_dir($dir)) {
+        // Ensure directory exists and is writable
+        if (!is_dir($dir)) {
             // Try to create directory
             if (!@mkdir($dir, 0755, true)) {
                 return false;
             }
         }
         
+        // Check if directory is writable, if not try to chmod it
+        if (!is_writable($dir)) {
+            @chmod($dir, 0755);
+            // Check again after chmod
+            if (!is_writable($dir)) {
+                return false;
+            }
+        }
+        
+        // If file exists but is not writable, try to chmod it
+        if (file_exists($file) && !is_writable($file)) {
+            @chmod($file, 0644);
+        }
+        
         // Try to write file
-        $result = @file_put_contents($file, $content);
+        $result = @file_put_contents($file, $content, LOCK_EX);
         
         if ($result !== false) {
             // Make sure file has correct permissions
