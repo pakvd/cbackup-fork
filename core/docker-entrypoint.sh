@@ -3,6 +3,7 @@
 # The app will show a proper error message if vendor is missing
 
 echo "=== Docker Entrypoint Script Starting ==="
+echo "Running as user: $(whoami)"
 echo "Current directory: $(pwd)"
 
 # If vendor directory doesn't exist and composer.json exists, install dependencies
@@ -187,29 +188,62 @@ fi
 
 # Set correct permissions for yii files
 # Note: With volume mounts, permissions may be overridden by host filesystem
-# Try multiple times and methods to ensure permissions are set correctly
+# We run as root, so we can try to force permissions even on volume mounts
 # yii.bat should be non-writable, non-executable (444 = read-only)
 if [ -f "/var/www/html/yii.bat" ]; then
-    # Try to set ownership first (may fail with volume mounts)
+    # Try to set ownership first (we're root, should work)
     chown www-data:www-data /var/www/html/yii.bat 2>/dev/null || true
-    # Set permissions - try multiple approaches
-    chmod 444 /var/www/html/yii.bat 2>/dev/null || chmod 444 /var/www/html/yii.bat || true
+    
+    # Set permissions using multiple methods
+    # Method 1: Direct chmod to 444
+    chmod 444 /var/www/html/yii.bat 2>/dev/null || true
+    
+    # Method 2: Remove write and execute bits explicitly
     chmod u-w /var/www/html/yii.bat 2>/dev/null || true
-    chmod -x /var/www/html/yii.bat 2>/dev/null || true
+    chmod g-w /var/www/html/yii.bat 2>/dev/null || true
+    chmod o-w /var/www/html/yii.bat 2>/dev/null || true
+    chmod a-x /var/www/html/yii.bat 2>/dev/null || true
+    
+    # Method 3: Use numeric mode again after explicit bits
+    chmod 444 /var/www/html/yii.bat 2>/dev/null || true
+    
     # Verify permissions were set
     PERMS=$(stat -c "%a" /var/www/html/yii.bat 2>/dev/null || echo "unknown")
-    echo "✓ Set permissions for yii.bat (target: 444, actual: $PERMS)"
+    IS_WRITABLE=$(test -w /var/www/html/yii.bat && echo "yes" || echo "no")
+    IS_EXECUTABLE=$(test -x /var/www/html/yii.bat && echo "yes" || echo "no")
+    
+    if [ "$PERMS" = "444" ] && [ "$IS_WRITABLE" = "no" ] && [ "$IS_EXECUTABLE" = "no" ]; then
+        echo "✓ Set permissions for yii.bat (444, non-writable, non-executable)"
+    else
+        echo "⚠ yii.bat permissions: $PERMS (target: 444), writable: $IS_WRITABLE, executable: $IS_EXECUTABLE"
+        echo "  Note: With volume mounts, host filesystem permissions may override container permissions"
+    fi
 fi
-# yii should be non-executable but readable
+# yii should be non-executable but readable (644)
 if [ -f "/var/www/html/yii" ]; then
-    # Try to set ownership first (may fail with volume mounts)
+    # Try to set ownership first (we're root, should work)
     chown www-data:www-data /var/www/html/yii 2>/dev/null || true
-    # Set permissions - try multiple approaches
-    chmod 644 /var/www/html/yii 2>/dev/null || chmod 644 /var/www/html/yii || true
-    chmod -x /var/www/html/yii 2>/dev/null || true
+    
+    # Set permissions using multiple methods
+    # Method 1: Direct chmod to 644
+    chmod 644 /var/www/html/yii 2>/dev/null || true
+    
+    # Method 2: Remove execute bit explicitly
+    chmod a-x /var/www/html/yii 2>/dev/null || true
+    
+    # Method 3: Use numeric mode again
+    chmod 644 /var/www/html/yii 2>/dev/null || true
+    
     # Verify permissions were set
     PERMS=$(stat -c "%a" /var/www/html/yii 2>/dev/null || echo "unknown")
-    echo "✓ Set permissions for yii (target: 644, actual: $PERMS)"
+    IS_EXECUTABLE=$(test -x /var/www/html/yii && echo "yes" || echo "no")
+    
+    if [ "$PERMS" = "644" ] && [ "$IS_EXECUTABLE" = "no" ]; then
+        echo "✓ Set permissions for yii (644, non-executable)"
+    else
+        echo "⚠ yii permissions: $PERMS (target: 644), executable: $IS_EXECUTABLE"
+        echo "  Note: With volume mounts, host filesystem permissions may override container permissions"
+    fi
 fi
 
 # Try to change ownership if possible (may fail with volume mounts, but try anyway)

@@ -8,7 +8,8 @@ help: ## Show this help message
 
 set-permissions: ## Set correct file permissions (run this first)
 	@echo "Setting file permissions..."
-	@./set-permissions.sh
+	@./set-permissions.sh || echo "⚠️  Some permissions may require sudo. Trying with sudo..."
+	@sudo ./set-permissions.sh 2>/dev/null || ./set-permissions.sh
 
 up: set-permissions ## Start containers (automatically sets permissions)
 	@echo "Starting containers..."
