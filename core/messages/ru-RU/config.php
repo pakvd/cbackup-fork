@@ -48,6 +48,7 @@ $lang = array(
     'Failed to synchronize. Check file permissions for: {file}' => 'Не удалось синхронизировать. Проверьте права доступа к файлу: {file}',
     'Failed to synchronize. Directory writable: {dir}, File writable: {file}' => 'Не удалось синхронизировать. Директория доступна для записи: {dir}, Файл доступен для записи: {file}',
     'Failed to synchronize. Please run on server: chmod 755 {dir} && chmod 644 {file}' => 'Не удалось синхронизировать. Выполните на сервере: chmod 755 {dir} && chmod 644 {file}',
+    'Failed to synchronize. Please fix file permissions manually. For Docker: {docker}, For direct: {direct}' => 'Не удалось синхронизировать. Исправьте права доступа вручную. Для Docker: {docker}, Напрямую: {direct}',
     'application.properties synchronized successfully after fixing permissions' => 'application.properties успешно синхронизирован после исправления прав доступа',
     'File created but some keys are missing: {keys}' => 'Файл создан, но отсутствуют некоторые ключи: {keys}',
     'No configuration data found in database' => 'Данные конфигурации не найдены в базе данных',

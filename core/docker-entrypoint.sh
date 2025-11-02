@@ -134,6 +134,12 @@ chmod -R 775 /var/www/html/modules/cds/content 2>/dev/null || true
 
 # Ensure bin directory exists with proper permissions
 mkdir -p /var/www/html/bin
+
+# Fix ownership and permissions for bin directory (may be created by worker as root)
+# Try to change ownership to www-data (PHP-FPM user), fallback to just chmod if chown fails
+if command -v chown >/dev/null 2>&1 && id www-data >/dev/null 2>&1; then
+    chown www-data:www-data /var/www/html/bin 2>/dev/null || true
+fi
 chmod 755 /var/www/html/bin
 
 # Create application.properties if it doesn't exist and database is ready
@@ -157,6 +163,16 @@ cbackup.scheme=http
 cbackup.site=http://web/index.php
 cbackup.token=
 EOF
+    # Set ownership and permissions for newly created file
+    if command -v chown >/dev/null 2>&1 && id www-data >/dev/null 2>&1; then
+        chown www-data:www-data /var/www/html/bin/application.properties 2>/dev/null || true
+    fi
+    chmod 644 /var/www/html/bin/application.properties
+else
+    # File exists - fix ownership and permissions in case it was created by worker as root
+    if command -v chown >/dev/null 2>&1 && id www-data >/dev/null 2>&1; then
+        chown www-data:www-data /var/www/html/bin/application.properties 2>/dev/null || true
+    fi
     chmod 644 /var/www/html/bin/application.properties
 fi
 

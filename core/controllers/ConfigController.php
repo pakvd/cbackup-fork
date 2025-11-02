@@ -277,13 +277,47 @@ class ConfigController extends Controller
                         $file = Yii::$app->basePath.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'application.properties';
                         $dir  = dirname($file);
                         
-                        // Try to fix permissions automatically
+                        // Try multiple methods to fix permissions
+                        $fixed = false;
+                        
+                        // Method 1: Try chmod (if file owned by same user)
                         if (is_dir($dir) && !is_writable($dir)) {
                             @chmod($dir, 0755);
+                            if (is_writable($dir)) {
+                                $fixed = true;
+                            }
                         }
                         if (file_exists($file) && !is_writable($file)) {
                             @chmod($file, 0644);
-                            // Try sync again after fixing permissions
+                            if (is_writable($file)) {
+                                $fixed = true;
+                            }
+                        }
+                        
+                        // Method 2: Try to change ownership via exec (if available and running as root)
+                        // Note: exec() is disabled in production PHP for security, but we try anyway
+                        if (!$fixed && function_exists('exec')) {
+                            // Try to change ownership to www-data (PHP-FPM user)
+                            // exec() returns last line, we need to check exit code separately
+                            $output = [];
+                            $exitCode = 0;
+                            @exec('whoami 2>/dev/null', $output, $exitCode);
+                            if ($exitCode === 0 && !empty($output)) {
+                                $user = trim(end($output));
+                                if ($user === 'root' || $user === 'www-data') {
+                                    @exec("chown www-data:www-data '{$dir}' 2>/dev/null", $output, $exitCode);
+                                    @exec("chown www-data:www-data '{$file}' 2>/dev/null", $output, $exitCode);
+                                    @chmod($dir, 0755);
+                                    @chmod($file, 0644);
+                                    if (is_writable($dir) && is_writable($file)) {
+                                        $fixed = true;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Try sync again after fixing permissions
+                        if ($fixed) {
                             $result = Config::syncApplicationProperties($data);
                             if ($result) {
                                 $status = 'success';
@@ -292,14 +326,13 @@ class ConfigController extends Controller
                         }
                         
                         if ($status !== 'success') {
-                            $dirExists = is_dir($dir) ? 'yes' : 'no';
-                            $dirWritable = is_dir($dir) && is_writable($dir) ? 'yes' : 'no';
-                            $fileExists = file_exists($file) ? 'yes' : 'no';
-                            $fileWritable = file_exists($file) && is_writable($file) ? 'yes' : 'no';
+                            // Provide clear instructions
+                            $dockerCmd = "docker compose exec web chmod 755 /var/www/html/bin && docker compose exec web chmod 644 /var/www/html/bin/application.properties";
+                            $directCmd = "chmod 755 {$dir} && chmod 644 {$file}";
                             
-                            $message = Yii::t('config', 'Failed to synchronize. Please run on server: chmod 755 {dir} && chmod 644 {file}', [
-                                'dir' => $dir,
-                                'file' => $file
+                            $message = Yii::t('config', 'Failed to synchronize. Please fix file permissions manually. For Docker: {docker}, For direct: {direct}', [
+                                'docker' => $dockerCmd,
+                                'direct' => $directCmd
                             ]);
                         }
                     }
