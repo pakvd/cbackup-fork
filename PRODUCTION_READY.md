@@ -47,23 +47,64 @@
 
 ## 🚀 Развертывание
 
+### Подготовка сервера
+
+Перед установкой выполните подготовку сервера:
+
+#### 1. Настройка Redis memory overcommit (рекомендуется)
+
+```bash
+# Временно (до перезагрузки)
+sudo sysctl vm.overcommit_memory=1
+
+# Постоянно (сохранится после перезагрузки)
+echo "vm.overcommit_memory = 1" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
+#### 2. Установка Docker и Docker Compose
+
+```bash
+# Установка Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# Установка Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker compose
+sudo chmod +x /usr/local/bin/docker compose
+```
+
+#### 3. Настройка Firewall
+
+```bash
+# Ubuntu/Debian
+sudo ufw allow 8080/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+
+# CentOS/RHEL
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --permanent --add-port=443/tcp
+sudo firewall-cmd --reload
+```
+
 ### Быстрый старт:
 ```bash
-# Клонировать репозиторий
+# 1. Клонировать репозиторий
 git clone <repository-url>
 cd cbackup-fork
 
-# Настроить переменные окружения (опционально)
-export MYSQL_PASSWORD=your_secure_password
-export MYSQL_ROOT_PASSWORD=your_root_password
-export ENABLE_OPCACHE=true
-export YII_DEBUG=false
-export YII_ENV=prod
+# 2. Создать .env файл с паролями
+cp .env.example .env
+nano .env  # Отредактируйте пароли
 
-# Запустить контейнеры
+# 3. Запустить контейнеры
 docker compose up -d
 
-# Проверить логи
+# 4. Проверить логи
 docker compose logs -f web
 ```
 

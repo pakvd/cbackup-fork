@@ -10,10 +10,93 @@
 - **Docker Compose** 2.0 или новее
 - **Минимум 4GB RAM**
 - **Минимум 10GB свободного места**
+- **Linux сервер** (Ubuntu 20.04+, Debian 10+, CentOS 7+)
 
-### Установка и запуск (3 шага)
+### Подготовка сервера
 
-#### 1. Настройка переменных окружения
+Перед установкой рекомендуется выполнить настройки сервера:
+
+#### 1. Обновление системы
+
+```bash
+# Ubuntu/Debian
+sudo apt-get update && sudo apt-get upgrade -y
+
+# CentOS/RHEL
+sudo yum update -y
+```
+
+#### 2. Установка Docker и Docker Compose
+
+```bash
+# Ubuntu/Debian
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# Установка Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker compose
+sudo chmod +x /usr/local/bin/docker compose
+
+# Проверка
+docker --version
+docker compose version
+```
+
+#### 3. Настройка Redis memory overcommit (рекомендуется)
+
+Это устранит предупреждение Redis и улучшит стабильность:
+
+```bash
+# Временно (до перезагрузки)
+sudo sysctl vm.overcommit_memory=1
+
+# Постоянно (сохранится после перезагрузки)
+echo "vm.overcommit_memory = 1" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
+#### 4. Настройка Firewall (опционально)
+
+```bash
+# Разрешить необходимые порты
+sudo ufw allow 8080/tcp  # HTTP
+sudo ufw allow 443/tcp   # HTTPS (если используется)
+sudo ufw enable
+
+# Или для firewalld (CentOS/RHEL)
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --permanent --add-port=443/tcp
+sudo firewall-cmd --reload
+```
+
+#### 5. Создание пользователя для приложения (опционально)
+
+```bash
+# Создать пользователя для cBackup
+sudo useradd -m -s /bin/bash cbackup
+sudo usermod -aG docker cbackup
+
+# Переключиться на пользователя
+su - cbackup
+```
+
+**📖 Подробная инструкция**: См. `SERVER_PREPARATION.md`
+
+### Установка и запуск (4 шага)
+
+#### 1. Клонирование репозитория
+
+```bash
+git clone <repository-url>
+cd cbackup-fork
+```
+
+> **Примечание**: Замените `<repository-url>` на URL вашего репозитория или путь к локальной копии проекта.
+
+#### 2. Настройка переменных окружения
 
 ```bash
 cp .env.example .env
@@ -28,7 +111,7 @@ MYSQL_ROOT_PASSWORD=your_secure_root_password
 
 **По умолчанию используются безопасные пароли** (`cbackup_secure_2024` и `root_secure_2024`). Для продакшена обязательно измените их!
 
-#### 2. Запуск приложения
+#### 3. Запуск приложения
 
 ```bash
 docker compose up -d
@@ -36,7 +119,7 @@ docker compose up -d
 
 Первый запуск может занять 2-5 минут (загрузка образов и установка зависимостей).
 
-#### 3. Открыть в браузере
+#### 4. Открыть в браузере
 
 **http://localhost:8080**
 
