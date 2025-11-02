@@ -62,6 +62,7 @@ $config = [
             'hostname' => getenv('REDIS_HOST') ?: 'redis',
             'port' => (int)(getenv('REDIS_PORT') ?: 6379),
             'database' => 0,
+            'password' => getenv('REDIS_PASSWORD') ?: null,
             'retries' => 1,
             'socketTimeout' => 2,
         ] : null,

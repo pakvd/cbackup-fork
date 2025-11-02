@@ -60,7 +60,12 @@ RUN chown -R www-data:www-data /var/www/html \
 RUN echo "error_reporting = E_ALL & ~E_DEPRECATED" > /usr/local/etc/php/conf.d/deprecated.ini && \
     echo "display_errors = Off" >> /usr/local/etc/php/conf.d/deprecated.ini && \
     echo "display_startup_errors = Off" >> /usr/local/etc/php/conf.d/deprecated.ini && \
-    echo "log_errors = On" >> /usr/local/etc/php/conf.d/deprecated.ini
+    echo "log_errors = On" >> /usr/local/etc/php/conf.d/deprecated.ini && \
+    echo "expose_php = Off" >> /usr/local/etc/php/conf.d/deprecated.ini && \
+    echo "; Security: disable dangerous functions" >> /usr/local/etc/php/conf.d/deprecated.ini && \
+    echo "; Note: exec, popen, proc_open are used but have fallbacks in code" >> /usr/local/etc/php/conf.d/deprecated.ini && \
+    echo "; curl_multi_exec is used in Install::checkInternet() but has timeout protection" >> /usr/local/etc/php/conf.d/deprecated.ini && \
+    echo "disable_functions = passthru,shell_exec,system,show_source" >> /usr/local/etc/php/conf.d/deprecated.ini
 
 # Configure opcache - enable by default for production
 # Set ENABLE_OPCACHE=false in docker-compose.yml to disable for development

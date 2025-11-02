@@ -179,13 +179,28 @@ class Install extends Model
                 
                 // Try to execute git command to verify it's valid
                 // This works even with open_basedir restrictions
-                $testCmd = escapeshellarg($gitPath) . ' --version 2>&1';
-                $result = @exec($testCmd, $output, $exitCode);
+                // If exec() is disabled, skip validation but allow path if file exists
+                $exitCode = -1;
+                if (function_exists('exec')) {
+                    $testCmd = escapeshellarg($gitPath) . ' --version 2>&1';
+                    $result = @exec($testCmd, $output, $exitCode);
+                } else {
+                    // exec() disabled: just check if file exists and is executable
+                    if (@is_file($gitPath) && @is_executable($gitPath)) {
+                        $exitCode = 0; // Assume valid if file exists and is executable
+                    }
+                }
                 
                 if ($exitCode !== 0) {
                     // Fallback: try just 'git' command if full path fails
-                    $testCmd2 = 'git --version 2>&1';
-                    $result2 = @exec($testCmd2, $output2, $exitCode2);
+                    $exitCode2 = -1;
+                    if (function_exists('exec')) {
+                        $testCmd2 = 'git --version 2>&1';
+                        $result2 = @exec($testCmd2, $output2, $exitCode2);
+                    } else {
+                        // exec() disabled: skip validation
+                        $exitCode2 = 0; // Allow if exec is disabled
+                    }
                     if ($exitCode2 === 0) {
                         // Git is available, update path
                         $whichCmd = (mb_stripos(PHP_OS, 'WIN') !== false) ? 'where git' : 'which git';
@@ -665,25 +680,29 @@ class Install extends Model
         
         if ( mb_stripos(PHP_OS, 'WIN') === false ) {
             // Linux/Docker: use nproc (works without /proc access)
-            $process = @popen('nproc 2>/dev/null', 'rb');
-            if ($process !== false && is_resource($process)) {
-                $output = '';
-                while (!feof($process)) {
-                    $chunk = @fread($process, 128);
-                    if ($chunk === false) {
-                        break;
+            // If popen() is disabled, skip this check
+            if (function_exists('popen')) {
+                $process = @popen('nproc 2>/dev/null', 'rb');
+                if ($process !== false && is_resource($process)) {
+                    $output = '';
+                    while (!feof($process)) {
+                        $chunk = @fread($process, 128);
+                        if ($chunk === false) {
+                            break;
+                        }
+                        $output .= $chunk;
                     }
-                    $output .= $chunk;
-                }
-                @pclose($process);
-                $detectedCores = intval(trim($output));
-                if ($detectedCores > 0) {
-                    $cores = $detectedCores;
+                    @pclose($process);
+                    $detectedCores = intval(trim($output));
+                    if ($detectedCores > 0) {
+                        $cores = $detectedCores;
+                    }
                 }
             }
             
             // macOS: use sysctl if nproc didn't work
-            if ($cores === 1 && mb_stripos(PHP_OS, 'DARWIN') !== false) {
+            // If popen() is disabled, skip this check
+            if ($cores === 1 && mb_stripos(PHP_OS, 'DARWIN') !== false && function_exists('popen')) {
                 $process = @popen('sysctl -n hw.ncpu 2>/dev/null', 'rb');
                 if ($process !== false && is_resource($process)) {
                     $output = '';

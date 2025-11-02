@@ -40,6 +40,7 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD:-cbackup_password}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       PHP_TIMEZONE: ${PHP_TIMEZONE:-UTC}
       ENABLE_OPCACHE: ${ENABLE_OPCACHE:-true}
       DOCKER_CONTAINER: "true"
@@ -77,13 +78,31 @@ services:
     image: redis:7-alpine
     container_name: cbackup_redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    # Security: Set password via REDIS_PASSWORD environment variable
+    # If not set, Redis will run without password (less secure but works)
+    command: >
+      sh -c "
+      if [ -n \"$$REDIS_PASSWORD\" ]; then
+        redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+      else
+        redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+      fi
+      "
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     volumes:
       - redis_data:/data
     networks:
       - cbackup_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: >
+        sh -c "
+        if [ -n \"$$REDIS_PASSWORD\" ]; then
+          redis-cli -a \"$$REDIS_PASSWORD\" ping
+        else
+          redis-cli ping
+        fi
+        "
       interval: 10s
       timeout: 3s
       retries: 5
@@ -96,7 +115,9 @@ services:
     container_name: cbackup_worker
     restart: unless-stopped
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-cbackup}?useSSL=false&serverTimezone=UTC
+      # Security: useSSL=true recommended for production (requires SSL certificates)
+      # For development: useSSL=false is acceptable if MySQL is only accessible within Docker network
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-cbackup}?useSSL=false&serverTimezone=UTC&useServerPrepStmts=true&cachePrepStmts=true
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-cbackup}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-cbackup_password}
       JAVA_OPTS: ${JAVA_OPTS:--Xmx512m -Xms256m}

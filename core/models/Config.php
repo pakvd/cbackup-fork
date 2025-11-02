@@ -123,13 +123,28 @@ class Config extends ActiveRecord
             
             // Try to execute git command to verify it's valid
             // This works even with open_basedir restrictions
-            $testCmd = escapeshellarg($gitPath) . ' --version 2>&1';
-            @exec($testCmd, $output, $exitCode);
+            // If exec() is disabled, skip validation but allow path if file exists
+            $exitCode = -1;
+            if (function_exists('exec')) {
+                $testCmd = escapeshellarg($gitPath) . ' --version 2>&1';
+                @exec($testCmd, $output, $exitCode);
+            } else {
+                // exec() disabled: just check if file exists and is executable
+                if (@is_file($gitPath) && @is_executable($gitPath)) {
+                    $exitCode = 0; // Assume valid if file exists and is executable
+                }
+            }
             
             if ($exitCode !== 0) {
                 // Fallback: try just 'git' command if full path fails
-                $testCmd2 = 'git --version 2>&1';
-                @exec($testCmd2, $output2, $exitCode2);
+                $exitCode2 = -1;
+                if (function_exists('exec')) {
+                    $testCmd2 = 'git --version 2>&1';
+                    @exec($testCmd2, $output2, $exitCode2);
+                } else {
+                    // exec() disabled: skip validation
+                    $exitCode2 = 0; // Allow if exec is disabled
+                }
                 if ($exitCode2 === 0) {
                     // Git is available, update path
                     $whichCmd = (mb_stripos(PHP_OS, 'WIN') !== false) ? 'where git' : 'which git';

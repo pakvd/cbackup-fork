@@ -32,6 +32,29 @@ class SystemHelper
      */
     public static function exec( $cmd )
     {
+        // If proc_open is disabled, try exec() as fallback
+        if (!function_exists('proc_open')) {
+            // Fallback to exec() if available
+            if (function_exists('exec')) {
+                $output = [];
+                $exitcode = 0;
+                @exec($cmd . ' 2>&1', $output, $exitcode);
+                return (object)[
+                    'stdin'    => '',
+                    'stdout'   => implode("\n", $output),
+                    'stderr'   => $exitcode !== 0 ? implode("\n", $output) : '',
+                    'exitcode' => $exitcode
+                ];
+            } else {
+                // Both proc_open and exec are disabled - return error
+                return (object)[
+                    'stdin'    => '',
+                    'stdout'   => '',
+                    'stderr'   => 'Command execution functions are disabled',
+                    'exitcode' => -1
+                ];
+            }
+        }
 
         $pipes  = [];
         $desc   = [0 => ["pipe", "r"], 1 => ["pipe", "w"], 2 => ["pipe", "w"]];
