@@ -131,13 +131,23 @@ services:
         condition: service_started
     networks:
       - cbackup_network
-    # Copy JAR to shared location after container starts
+    # Copy JAR to shared location before starting Java application
+    # Run as root temporarily to ensure write permissions, then switch to appuser
+    user: root
     command: >
       sh -c "
-      if [ ! -f /shared/bin/cbackup.jar ]; then
-        cp /app/app.jar /shared/bin/cbackup.jar || true
+      mkdir -p /shared/bin &&
+      if [ -f /app/app.jar ]; then
+        cp /app/app.jar /shared/bin/cbackup.jar &&
+        chmod 555 /shared/bin/cbackup.jar &&
+        FILE_SIZE=$$(stat -c%s /shared/bin/cbackup.jar 2>/dev/null || echo 0) &&
+        echo '✓ Copied cbackup.jar to shared volume (size: '$$FILE_SIZE' bytes)' &&
+        chown appuser:appuser /shared/bin/cbackup.jar || true
+      else
+        echo '⚠ /app/app.jar not found!'
       fi &&
-      java -jar app.jar
+      cd /app &&
+      exec su appuser -c 'java -jar app.jar'
       "
 
 volumes:

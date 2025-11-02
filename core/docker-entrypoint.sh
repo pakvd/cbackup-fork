@@ -145,11 +145,29 @@ if [ ! -f "/var/www/html/bin/cbackup.jar" ]; then
     SHARED_BIN="/shared/bin"
     
     while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-        # Check if shared volume has the file (if mounted)
-        if [ -f "$SHARED_BIN/cbackup.jar" ]; then
-            cp "$SHARED_BIN/cbackup.jar" /var/www/html/bin/cbackup.jar
-            echo "✓ Copied cbackup.jar from shared volume"
+        # Check if shared volume has the file (./core/bin is mounted, so it should be there)
+        # The shared bin directory is actually ./core/bin on the host, which is mounted as /var/www/html/bin in web container
+        # So we check directly in our bin directory (which is the same location)
+        if [ -f "/var/www/html/bin/cbackup.jar" ] && [ -s "/var/www/html/bin/cbackup.jar" ]; then
+            echo "✓ cbackup.jar already exists and is not empty"
             break
+        fi
+        
+        # Check if file exists in the actual mounted location (core/bin on host)
+        # Worker copies to ./core/bin/cbackup.jar which is mounted to /var/www/html/bin
+        if [ -f "/var/www/html/bin/cbackup.jar" ]; then
+            # Check if it's empty (size 0) - if so, remove it and wait for worker to copy
+            FILE_SIZE=$(stat -c%s /var/www/html/bin/cbackup.jar 2>/dev/null || echo "0")
+            if [ "$FILE_SIZE" -gt 1000 ]; then
+                echo "✓ Found cbackup.jar with size $FILE_SIZE bytes"
+                break
+            elif [ "$FILE_SIZE" -eq 0 ]; then
+                # Remove empty placeholder file so worker can copy real file
+                rm -f /var/www/html/bin/cbackup.jar 2>/dev/null || true
+                echo "  Removed empty placeholder, waiting for worker to copy... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
+            else
+                echo "  File exists but is too small ($FILE_SIZE bytes), waiting for worker... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
+            fi
         fi
         
         # Alternative: Try to copy from worker container directly
@@ -172,7 +190,6 @@ if [ ! -f "/var/www/html/bin/cbackup.jar" ]; then
         
         ATTEMPT=$((ATTEMPT + 1))
         if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-            echo "  Waiting for worker container... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
             sleep 1
         fi
     done
