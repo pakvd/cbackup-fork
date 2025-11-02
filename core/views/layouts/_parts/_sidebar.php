@@ -26,34 +26,48 @@ use app\models\Plugin;
 
         <?php
 
-            // CRITICAL: Wrap user access in try-catch to prevent DB queries during render
-            // For about page, we need to avoid any RBAC queries that might load schema
-            $user = null;
+            // CRITICAL: For about page, disable ALL RBAC checks to prevent DB queries
+            // Check if we're on about page first - BEFORE any Yii component access
             $isAboutPage = false;
+            $user = null;
+            $userCanAdmin = false;
+            
             try {
-                // Check if we're on about page - if so, disable RBAC checks
-                $currentRoute = $this->context->action->uniqueId ?? '';
+                $currentRoute = isset($this->context->action) ? $this->context->action->uniqueId : '';
                 $isAboutPage = (strpos($currentRoute, 'help/about') !== false);
                 
+                // Only access user component if NOT on about page
                 if (!$isAboutPage) {
                     $user = Yii::$app->getUser();
+                    // Cache admin check once to avoid repeated DB queries
+                    try {
+                        $userCanAdmin = $user->can('admin');
+                    } catch (\Throwable $e) {
+                        $userCanAdmin = false;
+                    }
                 } else {
-                    // For about page, create a mock user object that always denies access
-                    // to prevent RBAC queries
-                    $user = new class {
-                        public function can($permission) { return false; }
-                        public function isGuest() { return false; }
-                        public function getId() { return null; }
-                    };
+                    // For about page: skip ALL RBAC - set everything to false
+                    $userCanAdmin = false;
+                    $user = Yii::$app->getUser(); // Still need user object for other checks
                 }
             } catch (\Throwable $e) {
-                // If user component fails, create mock
-                $user = new class {
-                    public function can($permission) { return false; }
-                    public function isGuest() { return false; }
-                    public function getId() { return null; }
-                };
+                // On any error, use safe defaults
+                $isAboutPage = false;
+                $userCanAdmin = false;
+                try {
+                    $user = Yii::$app->getUser();
+                } catch (\Throwable $e2) {
+                    $user = null;
+                }
             }
+            
+            // Helper function to safely check admin access without DB queries on about page
+            $checkAdmin = function() use ($isAboutPage, $userCanAdmin, $user) {
+                if ($isAboutPage) {
+                    return false; // Always deny on about page to prevent DB queries
+                }
+                return $userCanAdmin || (isset($user) && $user->can('admin'));
+            };
 
             /**
              * Check if current request route is identical to param to
@@ -122,7 +136,7 @@ use app\models\Plugin;
                                 'label'   => $entry->plugin_params['translated_name'],
                                 'url'     => [$plugin_url],
                                 'active'  => ($plugin_url == $module_route) ? true : false,
-                                'visible' => Yii::$app->user->can($entry->access)
+                                'visible' => $isAboutPage ? false : (isset($user) && $user->can($entry->access))
                             ];
                         }
                     }
@@ -162,13 +176,13 @@ use app\models\Plugin;
                             [
                                 'label'   => Yii::t('app', 'Add manually'),
                                 'url'     => ['/node/add'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['node/add']),
                             ],
                             [
                                 'label'   => Yii::t('app', 'Exclusions'),
                                 'url'     => ['/network/exclusion/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['network/exclusion/list', 'network/exclusion/add', 'network/exclusion/edit']),
                             ],
                         ]
@@ -181,25 +195,25 @@ use app\models\Plugin;
                             [
                                 'label'   => Yii::t('app', 'System'),
                                 'url'     => ['/log/system/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['log/system/list']),
                             ],
                             [
                                 'label'   => Yii::t('node', 'Nodes'),
                                 'url'     => ['/log/nodelog/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['log/nodelog/list']),
                             ],
                             [
                                 'label'   => Yii::t('app', 'Scheduler'),
                                 'url'     => ['/log/scheduler/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['log/scheduler/list']),
                             ],
                             [
                                 'label'   => Yii::t('app', 'Mail'),
                                 'url'     => ['/log/mailerlog/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['log/mailerlog/list']),
                             ],
                         ]
@@ -212,13 +226,13 @@ use app\models\Plugin;
                             [
                                 'label'   => Yii::t('app', 'Subnets'),
                                 'url'     => ['/network/subnet/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['network/subnet/list', 'network/subnet/add', 'network/subnet/edit']),
                             ],
                             [
                                 'label'   => Yii::t('app', 'Devices'),
                                 'url'     => ['/network/device/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute([
                                     'network/device/list',
                                     'network/device/add',
@@ -237,13 +251,13 @@ use app\models\Plugin;
                             [
                                 'label'   => Yii::t('app', 'Credentials'),
                                 'url'     => ['/network/credential/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['network/credential/list', 'network/credential/add', 'network/credential/edit']),
                             ],
                             [
                                 'label'   => Yii::t('app', 'Device auth templates'),
                                 'url'     => ['/network/authtemplate/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['network/authtemplate/list', 'network/authtemplate/add', 'network/authtemplate/edit']),
                             ],
                         ],
@@ -256,20 +270,20 @@ use app\models\Plugin;
                             [
                                 'label'   => Yii::t('app', 'Tasks'),
                                 'url'     => ['/network/task/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['network/task/list', 'network/task/add', 'network/task/edit']),
                             ],
                             [
                                 'label'   => Yii::t('app', 'Workers & Jobs'),
                                 'url'     => ['/network/worker/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['network/worker/list']),
                             ],
                             [
                                 'label'   => Yii::t('app', 'Task assignments'),
                                 'url'     => ['/network/assigntask/list'],
                                 'options' => ['class' => 'set-active-tab', 'data-target' => 'node_tasks'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute([
                                         'network/assigntask/list',
                                         'network/assigntask/assign-device-task',
@@ -284,7 +298,7 @@ use app\models\Plugin;
                                 'label'   => Yii::t('app', 'Schedules'),
                                 'url'     => ['/network/schedule/list'],
                                 'options' => ['class' => 'set-active-tab', 'data-target' => 'tasks_schedule'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['network/schedule/list', 'network/schedule/add', 'network/schedule/edit']),
                             ],
                             [
@@ -294,13 +308,13 @@ use app\models\Plugin;
                             [
                                 'label'   => Yii::t('app', 'Global worker variables'),
                                 'url'     => ['/network/workervariables'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['network/workervariables/list', 'network/workervariables/add', 'network/workervariables/edit']),
                             ],
                             [
                                 'label'   => Yii::t('app', 'Mailer') . '<span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>',
                                 'url'     => ['/'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'options' => ['class' => 'treeview'],
                                 'items' => [
                                     [
@@ -324,7 +338,7 @@ use app\models\Plugin;
                             [
                                 'label'   => Yii::t('app', 'Task output tables'),
                                 'url'     => ['/network/outcustom/list'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['network/outcustom/list']),
                             ],
                         ]
@@ -347,13 +361,13 @@ use app\models\Plugin;
                             [
                                 'label'   => Yii::t('app', 'Plugin manager'),
                                 'url'     => ['/plugin/index'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['plugin/index', 'plugin/edit-plugin']),
                             ],
                             [
                                 'label'   => Yii::t('app', 'Content delivery system'),
                                 'url'     => ['/cds'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'active'  => $checkRoute(['cds/cds/index']),
                             ],
                             [
@@ -363,7 +377,7 @@ use app\models\Plugin;
                             [
                                 'label'   => Yii::t('app', 'User management') . '<span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>',
                                 'url'     => ['/'],
-                                'visible' => $user->can('admin'),
+                                'visible' => $checkAdmin(),
                                 'options' => ['class' => 'treeview'],
                                 'items' => [
                                     [

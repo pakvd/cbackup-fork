@@ -182,8 +182,25 @@ class HelpController extends Controller
             // Render with output buffering and timeout
             error_log("Step 19: Starting render");
             $renderStart = microtime(true);
+            
+            // CRITICAL: Disable schema cache BEFORE render to prevent any DB queries
+            if (isset($app->db)) {
+                $app->db->enableSchemaCache = false;
+                error_log("Step 19.1: Schema cache disabled before render");
+            }
+            
+            // Use register_shutdown_function to detect if render hangs
+            $renderCompleted = false;
+            register_shutdown_function(function() use (&$renderCompleted, $renderStart) {
+                if (!$renderCompleted) {
+                    $hangTime = microtime(true) - $renderStart;
+                    error_log("RENDER HANG DETECTED: Render did not complete after {$hangTime}s");
+                }
+            });
+            
             ob_start();
             try {
+                error_log("Step 19.2: Calling render() method");
                 $result = $this->render('about', [
                     'phpinfo'      => $phpinfo,
                     'SERVER'       => $_SERVER,
@@ -194,8 +211,9 @@ class HelpController extends Controller
                     'dbDriverName' => $dbDriverName,
                 ]);
                 
+                $renderCompleted = true;
                 $renderElapsed = microtime(true) - $renderStart;
-                error_log("Step 20: Render time: {$renderElapsed}s");
+                error_log("Step 20: Render completed, time: {$renderElapsed}s");
                 
                 $totalElapsed = microtime(true) - $startTime;
                 error_log("Step 21: Total time: {$totalElapsed}s");
@@ -203,6 +221,7 @@ class HelpController extends Controller
                 
                 return $result;
             } catch (\Throwable $renderError) {
+                $renderCompleted = true;
                 ob_end_clean();
                 error_log("RENDER ERROR: " . $renderError->getMessage() . " in " . $renderError->getFile() . ":" . $renderError->getLine());
                 error_log("Stack trace: " . $renderError->getTraceAsString());
