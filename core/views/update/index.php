@@ -56,16 +56,17 @@ $this->registerJs(/** @lang JavaScript */"
                         <strong><?= Yii::t('update', 'Docker Installation Detected') ?></strong><br>
                         <?= Yii::t('update', 'Your cBackup installation is running in Docker containers. Use the instructions below to update.') ?>
                     </div>
+                    <div class="alert alert-warning">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <strong><?= Yii::t('update', 'Recommended: Use Makefile') ?></strong><br>
+                        <?= Yii::t('update', 'For easier update process, use Makefile commands. All commands are available via:') ?> <code>make help</code>
+                    </div>
                     <ol>
                         <li>
                             <strong><?= Yii::t('update', 'Backup database') ?></strong><br>
-                            <code>docker-compose exec db mysqldump -u <?= Yii::$app->db->username ?> -p<?= $database ?> | gzip > backup-$(date +%Y-%m-%d).sql.gz</code>
+                            <code>docker compose exec db mysqldump -u <?= Yii::$app->db->username ?> -p<?= $database ?> | gzip > backup-$(date +%Y-%m-%d).sql.gz</code>
                             <br><small class="text-muted"><?= Yii::t('update', 'Password will be prompted. Use password from your .env file.') ?></small>
-                            <br><br>
-                        </li>
-                        <li>
-                            <strong><?= Yii::t('update', 'Stop containers') ?></strong><br>
-                            <code>docker-compose stop</code>
+                            <br><small class="text-info"><i class="fa fa-info-circle"></i> <?= Yii::t('update', 'Or use:') ?> <code>make backup-db</code> <?= Yii::t('update', '(if available)') ?></small>
                             <br><br>
                         </li>
                         <li>
@@ -75,34 +76,41 @@ $this->registerJs(/** @lang JavaScript */"
                             <br><br>
                         </li>
                         <li>
-                            <strong><?= Yii::t('update', 'Rebuild Docker images') ?></strong><br>
-                            <code>docker-compose build --no-cache</code>
-                            <br><small class="text-muted"><?= Yii::t('update', 'This will rebuild all containers with updated code.') ?></small>
+                            <strong><?= Yii::t('update', 'Stop containers') ?></strong><br>
+                            <code>make down</code><br>
+                            <small class="text-muted"><?= Yii::t('update', 'Or manually:') ?> <code>docker compose down</code></small>
                             <br><br>
                         </li>
                         <li>
-                            <strong><?= Yii::t('update', 'Start containers') ?></strong><br>
-                            <code>docker-compose up -d</code>
-                            <br><small class="text-muted"><?= Yii::t('update', 'Start all services with updated images.') ?></small>
+                            <strong><?= Yii::t('update', 'Set file permissions') ?></strong><br>
+                            <code>make set-permissions</code><br>
+                            <small class="text-muted"><?= Yii::t('update', 'Automatically sets correct permissions on all files.') ?></small>
+                            <br><br>
+                        </li>
+                        <li>
+                            <strong><?= Yii::t('update', 'Rebuild Docker images') ?></strong><br>
+                            <code>make rebuild</code><br>
+                            <small class="text-muted"><?= Yii::t('update', 'Rebuilds all containers with updated code and restarts them.') ?></small>
+                            <br><small class="text-muted"><?= Yii::t('update', 'Or manually:') ?> <code>docker compose build --no-cache && docker compose up -d</code></small>
                             <br><br>
                         </li>
                         <li>
                             <strong><?= Yii::t('update', 'Update database') ?></strong><br>
-                            <code>docker-compose exec web php yii migrate</code>
+                            <code>docker compose exec web php yii migrate</code>
                             <br><small class="text-muted"><?= Yii::t('update', 'Apply database migrations if any.') ?></small>
                             <br><br>
                         </li>
                         <li>
                             <strong><?= Yii::t('update', 'Flush cache') ?></strong><br>
-                            <code>docker-compose exec web php yii cache/flush-all</code><br>
-                            <code>docker-compose exec web php yii asset/flush-all</code>
+                            <code>docker compose exec web php yii cache/flush-all</code><br>
+                            <code>docker compose exec web php yii asset/flush-all</code>
                             <br><small class="text-muted"><?= Yii::t('update', 'Clear application cache and assets.') ?></small>
                             <br><br>
                         </li>
                         <li>
                             <strong><?= Yii::t('update', 'Check service status') ?></strong><br>
-                            <code>docker-compose ps</code>
-                            <br><small class="text-muted"><?= Yii::t('update', 'Verify all containers are running.') ?></small>
+                            <code>make status</code><br>
+                            <small class="text-muted"><?= Yii::t('update', 'Or manually:') ?> <code>docker compose ps</code></small>
                             <br><br>
                         </li>
                     </ol>
@@ -113,23 +121,47 @@ $this->registerJs(/** @lang JavaScript */"
                         <?= Yii::t('update', 'Now update is finished, check if everything works as it is intended.') ?>
                         <br><?= Yii::t('update', 'It is strongly recommended to reset your browser cache by pressing CTRL+F5 or CMD+SHIFT+R') ?>
                     </div>
-                    <h4><?= Yii::t('update', 'Quick Update Commands') ?></h4>
+                    <h4><?= Yii::t('update', 'Quick Update Commands (Using Makefile)') ?></h4>
                     <p><?= Yii::t('update', 'For quick update, you can run these commands in sequence:') ?></p>
-                    <pre style="background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto;"># Backup database
-docker-compose exec db mysqldump -u <?= Yii::$app->db->username ?> -p<?= $database ?> | gzip > backup-$(date +%Y-%m-%d).sql.gz
+                    <pre style="background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto;"># 1. Backup database (optional but recommended)
+docker compose exec db mysqldump -u <?= Yii::$app->db->username ?> -p<?= $database ?> | gzip > backup-$(date +%Y-%m-%d).sql.gz
 
-# Stop, rebuild and start
-docker-compose stop
-docker-compose build --no-cache
-docker-compose up -d
+# 2. Pull latest code
+git pull
+
+# 3. Stop containers, rebuild and start with updated permissions
+make down
+make set-permissions
+make rebuild
+
+# 4. Update database and clear cache
+docker compose exec web php yii migrate
+docker compose exec web php yii cache/flush-all
+docker compose exec web php yii asset/flush-all
+
+# 5. Verify
+make status</pre>
+                    <h4><?= Yii::t('update', 'Alternative: Manual Commands (without Makefile)') ?></h4>
+                    <p><?= Yii::t('update', 'If Makefile is not available, use these commands:') ?></p>
+                    <pre style="background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto;"># Backup database
+docker compose exec db mysqldump -u <?= Yii::$app->db->username ?> -p<?= $database ?> | gzip > backup-$(date +%Y-%m-%d).sql.gz
+
+# Pull latest code
+git pull
+
+# Stop, set permissions, rebuild and start
+docker compose down
+./set-permissions.sh
+docker compose build --no-cache
+docker compose up -d
 
 # Update database and clear cache
-docker-compose exec web php yii migrate
-docker-compose exec web php yii cache/flush-all
-docker-compose exec web php yii asset/flush-all
+docker compose exec web php yii migrate
+docker compose exec web php yii cache/flush-all
+docker compose exec web php yii asset/flush-all
 
 # Verify
-docker-compose ps</pre>
+docker compose ps</pre>
                 </div>
             </div>
         <?php else: ?>
