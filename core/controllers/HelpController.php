@@ -45,6 +45,14 @@ class HelpController extends Controller
      */
     public function actionAbout()
     {
+        // CRITICAL: Prevent recursion - if already rendering, return immediately
+        static $rendering = false;
+        if ($rendering) {
+            error_log("=== HelpController::actionAbout() RECURSION DETECTED - returning empty ===");
+            return '<div>About page is loading...</div>';
+        }
+        $rendering = true;
+        
         // CRITICAL: Ultra-fast page with zero database queries
         // This page MUST load instantly without any DB operations
         
@@ -202,7 +210,7 @@ class HelpController extends Controller
             try {
                 error_log("Step 19.2: Calling render() method");
                 
-                // Render with layout but ensure schema cache stays disabled
+                // CRITICAL: Use render() but prevent recursion by ensuring layout doesn't call actionAbout again
                 error_log("Step 19.3: Starting render with layout");
                 
                 // Ensure schema cache is still disabled during render
@@ -210,39 +218,23 @@ class HelpController extends Controller
                     $app->db->enableSchemaCache = false;
                 }
                 
-                try {
-                    // Render with layout - sidebar/header are fixed to not query DB on about page
-                    $result = $this->render('about', [
-                        'phpinfo'      => $phpinfo,
-                        'SERVER'       => $_SERVER,
-                        'perms'        => $perms,
-                        'plugins'      => $safePlugins,
-                        'extensions'   => $extensions,
-                        'dbVersion'    => $dbVersion,
-                        'dbDriverName' => $dbDriverName,
-                    ]);
-                    error_log("Step 19.4: Render completed successfully");
-                } catch (\Throwable $renderError) {
-                    error_log("Step 19.4 ERROR during render: " . $renderError->getMessage());
-                    error_log("Stack trace: " . $renderError->getTraceAsString());
-                    // Try renderPartial as fallback
-                    try {
-                        error_log("Step 19.4.1: Trying renderPartial as fallback");
-                        $result = $this->renderPartial('about', [
-                            'phpinfo'      => $phpinfo,
-                            'SERVER'       => $_SERVER,
-                            'perms'        => $perms,
-                            'plugins'      => $safePlugins,
-                            'extensions'   => $extensions,
-                            'dbVersion'    => $dbVersion,
-                            'dbDriverName' => $dbDriverName,
-                        ], false);
-                        error_log("Step 19.4.2: renderPartial completed");
-                    } catch (\Throwable $fallbackError) {
-                        error_log("Step 19.4.2 FALLBACK ERROR: " . $fallbackError->getMessage());
-                        throw $renderError; // Throw original error
-                    }
+                // Use render() which will use layout, but sidebar/header are already fixed
+                // Set a flag to prevent recursion if somehow actionAbout is called again
+                $originalActionId = $this->action->id ?? '';
+                if ($originalActionId !== 'about') {
+                    error_log("WARNING: Action ID changed from 'about' to '{$originalActionId}'");
                 }
+                
+                $result = $this->render('about', [
+                    'phpinfo'      => $phpinfo,
+                    'SERVER'       => $_SERVER,
+                    'perms'        => $perms,
+                    'plugins'      => $safePlugins,
+                    'extensions'   => $extensions,
+                    'dbVersion'    => $dbVersion,
+                    'dbDriverName' => $dbDriverName,
+                ]);
+                error_log("Step 19.4: Render completed");
                 
                 $renderCompleted = true;
                 $renderElapsed = microtime(true) - $renderStart;
@@ -279,6 +271,9 @@ class HelpController extends Controller
                     // Ignore
                 }
             }
+            
+            // Clear recursion guard
+            $rendering = false;
             error_log("=== HelpController::actionAbout() FINALLY ===");
         }
 
