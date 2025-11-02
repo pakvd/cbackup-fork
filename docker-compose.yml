@@ -53,6 +53,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      worker:
+        condition: service_started
     networks:
       - cbackup_network
 
@@ -127,8 +129,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      web:
-        condition: service_started
     networks:
       - cbackup_network
     # Copy JAR to shared location before starting Java application

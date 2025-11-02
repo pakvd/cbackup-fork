@@ -134,72 +134,20 @@ chmod -R 775 /var/www/html/modules/cds/content 2>/dev/null || true
 # Ensure bin directory exists
 mkdir -p /var/www/html/bin
 
-# Copy cbackup.jar from worker container
-# Worker container copies the JAR to shared volume, we just need to wait and copy it
-if [ ! -f "/var/www/html/bin/cbackup.jar" ]; then
-    echo "=== cbackup.jar not found, waiting for worker to copy it ==="
-    
-    # Wait up to 30 seconds for worker container to copy the file to shared location
-    MAX_ATTEMPTS=30
-    ATTEMPT=0
-    SHARED_BIN="/shared/bin"
-    
-    while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-        # Check if shared volume has the file (./core/bin is mounted, so it should be there)
-        # The shared bin directory is actually ./core/bin on the host, which is mounted as /var/www/html/bin in web container
-        # So we check directly in our bin directory (which is the same location)
-        if [ -f "/var/www/html/bin/cbackup.jar" ] && [ -s "/var/www/html/bin/cbackup.jar" ]; then
-            echo "✓ cbackup.jar already exists and is not empty"
-            break
-        fi
-        
-        # Check if file exists in the actual mounted location (core/bin on host)
-        # Worker copies to ./core/bin/cbackup.jar which is mounted to /var/www/html/bin
-        if [ -f "/var/www/html/bin/cbackup.jar" ]; then
-            # Check if it's empty (size 0) - if so, remove it and wait for worker to copy
-            FILE_SIZE=$(stat -c%s /var/www/html/bin/cbackup.jar 2>/dev/null || echo "0")
-            if [ "$FILE_SIZE" -gt 1000 ]; then
-                echo "✓ Found cbackup.jar with size $FILE_SIZE bytes"
-                break
-            elif [ "$FILE_SIZE" -eq 0 ]; then
-                # Remove empty placeholder file so worker can copy real file
-                rm -f /var/www/html/bin/cbackup.jar 2>/dev/null || true
-                echo "  Removed empty placeholder, waiting for worker to copy... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
-            else
-                echo "  File exists but is too small ($FILE_SIZE bytes), waiting for worker... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
-            fi
-        fi
-        
-        # Alternative: Try to copy from worker container directly
-        if command -v docker >/dev/null 2>&1 && [ -S /var/run/docker.sock ]; then
-            WORKER_CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'cbackup.*worker|worker.*cbackup' | head -1)
-            if [ -n "$WORKER_CONTAINER" ]; then
-                if docker cp "$WORKER_CONTAINER:/app/app.jar" /var/www/html/bin/cbackup.jar 2>/dev/null; then
-                    echo "✓ Copied cbackup.jar from worker container"
-                    break
-                fi
-            fi
-        fi
-        
-        # Alternative: Try to copy from worker build directory (if building locally)
-        if [ -f "/var/www/html/../worker/target/cbackup.jar" ]; then
-            cp /var/www/html/../worker/target/cbackup.jar /var/www/html/bin/cbackup.jar
-            echo "✓ Copied cbackup.jar from worker build directory"
-            break
-        fi
-        
-        ATTEMPT=$((ATTEMPT + 1))
-        if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-            sleep 1
-        fi
-    done
-    
-    # Check if file was created
-    if [ ! -f "/var/www/html/bin/cbackup.jar" ]; then
-        echo "⚠ cbackup.jar not found after $MAX_ATTEMPTS attempts"
-        echo "  Worker container might not be running or file is not available"
-        echo "  You can copy it manually: docker compose cp worker:/app/app.jar core/bin/cbackup.jar"
+# Check cbackup.jar - worker container should have copied it already (web depends on worker)
+# Worker copies to ./core/bin/cbackup.jar which is mounted as /var/www/html/bin/cbackup.jar
+if [ -f "/var/www/html/bin/cbackup.jar" ]; then
+    FILE_SIZE=$(stat -c%s /var/www/html/bin/cbackup.jar 2>/dev/null || echo "0")
+    if [ "$FILE_SIZE" -gt 1000 ]; then
+        echo "✓ cbackup.jar found (size: $FILE_SIZE bytes)"
+    else
+        echo "⚠ cbackup.jar exists but is empty or too small ($FILE_SIZE bytes)"
+        echo "  Worker container might not have copied the file correctly"
     fi
+else
+    echo "⚠ cbackup.jar not found in /var/www/html/bin/"
+    echo "  Worker container should have copied it during startup"
+    echo "  You can copy it manually: docker compose cp worker:/app/app.jar core/bin/cbackup.jar"
 fi
 
 # Create application.properties if it doesn't exist (from template)
