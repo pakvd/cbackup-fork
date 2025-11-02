@@ -556,32 +556,38 @@ class Install extends Model
                 $filePerms = @fileperms($locations[$i]['path']);
                 
                 // Check writable permissions
-                // Use fileperms() bits instead of is_writable() for Docker compatibility
+                // Always use fileperms() bits when available (more reliable than is_writable())
+                // fileperms() returns file mode including file type, so we mask it with 0777
                 if( !is_null($locations[$i]['writable']) ) {
-                    if ($isDocker && $filePerms !== false) {
-                        // In Docker: use actual permission bits
-                        $ownerWritable = ($filePerms & 0200) != 0; // Owner write bit
-                        $groupWritable = ($filePerms & 0020) != 0; // Group write bit
-                        $worldWritable = ($filePerms & 0002) != 0; // World write bit
+                    if ($filePerms !== false) {
+                        // Use actual permission bits (mask with 0777 to get only permission bits)
+                        $perms = $filePerms & 0777;
+                        // Convert to octal string for comparison (e.g., 444, 644, etc.)
+                        $permsOctal = sprintf('%o', $perms);
+                        $ownerWritable = ($perms & 0200) != 0; // Owner write bit
+                        $groupWritable = ($perms & 0020) != 0; // Group write bit
+                        $worldWritable = ($perms & 0002) != 0; // World write bit
                         $isWritable = $ownerWritable || $groupWritable || $worldWritable;
                     } else {
-                        // Non-Docker or can't check bits: use is_writable()
+                        // Fallback to is_writable() only if fileperms() fails
                         $isWritable = is_writable($locations[$i]['path']);
                     }
                     
+                    // For yii.bat: expected non-writable (false), but check if actual is writable (true)
                     if( $isWritable !== $locations[$i]['writable'] ) {
                         $locations[$i]['errors']['w'] = true;
                     }
                 }
                 
                 // Check executable permissions
-                // Use fileperms() bits instead of is_executable() for Docker compatibility
+                // Always use fileperms() bits when available (more reliable than is_executable())
                 $hasExecuteBits = false;
-                if ($isDocker && $filePerms !== false) {
-                    // In Docker: use actual permission bits
-                    $hasExecuteBits = ($filePerms & 0111) != 0; // Check execute bits (owner/group/world)
+                if ($filePerms !== false) {
+                    // Use actual permission bits (mask with 0777 to get only permission bits)
+                    $perms = $filePerms & 0777;
+                    $hasExecuteBits = ($perms & 0111) != 0; // Check execute bits (owner/group/world)
                 } else {
-                    // Non-Docker or can't check bits: use is_executable()
+                    // Fallback to is_executable() only if fileperms() fails
                     $hasExecuteBits = is_executable($locations[$i]['path']);
                 }
                 
