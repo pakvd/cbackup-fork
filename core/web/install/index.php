@@ -434,6 +434,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     CONSTRAINT `fk_schedule_task` FOREIGN KEY (`task_name`) REFERENCES `task` (`name`) ON DELETE CASCADE ON UPDATE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
                 
+                // Insert default tasks (system tasks that should exist by default)
+                // These tasks are referenced in documentation and may be used by the system
+                $pdo->exec("INSERT IGNORE INTO `task` (`name`, `task_type`, `put`, `table`, `protected`, `description`) VALUES
+                    ('backup', 'backup', 'database', 'out_backup', 1, 'Backup task - stores configuration backups in database'),
+                    ('discovery', 'discovery', NULL, NULL, 1, 'Discovery task - automatically discovers network devices'),
+                    ('stp', 'custom', 'database', 'out_stp', 1, 'STP information collection task'),
+                    ('save', 'custom', 'file', NULL, 1, 'Save task - saves configurations to file system'),
+                    ('git_commit', 'custom', 'git', NULL, 1, 'Git commit task - commits changes to Git repository'),
+                    ('log_processing', 'custom', NULL, NULL, 1, 'Log processing task'),
+                    ('node_processing', 'custom', NULL, NULL, 1, 'Node processing task')");
+                
                 // Create worker table
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `worker` (
                     `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
