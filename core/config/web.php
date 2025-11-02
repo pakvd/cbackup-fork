@@ -39,7 +39,8 @@ $config = [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
         '@webroot' => dirname(__DIR__) . '/web',
-        '@web' => '@webroot',
+        // @web should be URL path (empty string for root), not file path
+        // Yii2 will set @web automatically if not defined, so we don't override it
     ],
 
     'components' => [
