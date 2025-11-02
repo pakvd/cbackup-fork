@@ -134,19 +134,54 @@ chmod -R 775 /var/www/html/modules/cds/content 2>/dev/null || true
 # Ensure bin directory exists
 mkdir -p /var/www/html/bin
 
-# Copy or create cbackup.jar
-# Note: In production, this file should be copied from worker container during build/deployment
+# Copy cbackup.jar from worker container
+# Worker container copies the JAR to shared volume, we just need to wait and copy it
 if [ ! -f "/var/www/html/bin/cbackup.jar" ]; then
-    echo "=== cbackup.jar not found ==="
-    # Try to copy from worker build directory (if building locally)
-    if [ -f "/var/www/html/../worker/target/cbackup.jar" ]; then
-        cp /var/www/html/../worker/target/cbackup.jar /var/www/html/bin/cbackup.jar
-        echo "✓ Copied cbackup.jar from worker build directory"
-    else
-        echo "⚠ cbackup.jar not found. Creating placeholder."
-        echo "  In production, copy it from worker container: docker compose cp worker:/app/app.jar core/bin/cbackup.jar"
-        # Create empty placeholder (diagnostics will still check permissions)
-        touch /var/www/html/bin/cbackup.jar 2>/dev/null || true
+    echo "=== cbackup.jar not found, waiting for worker to copy it ==="
+    
+    # Wait up to 30 seconds for worker container to copy the file to shared location
+    MAX_ATTEMPTS=30
+    ATTEMPT=0
+    SHARED_BIN="/shared/bin"
+    
+    while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+        # Check if shared volume has the file (if mounted)
+        if [ -f "$SHARED_BIN/cbackup.jar" ]; then
+            cp "$SHARED_BIN/cbackup.jar" /var/www/html/bin/cbackup.jar
+            echo "✓ Copied cbackup.jar from shared volume"
+            break
+        fi
+        
+        # Alternative: Try to copy from worker container directly
+        if command -v docker >/dev/null 2>&1 && [ -S /var/run/docker.sock ]; then
+            WORKER_CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'cbackup.*worker|worker.*cbackup' | head -1)
+            if [ -n "$WORKER_CONTAINER" ]; then
+                if docker cp "$WORKER_CONTAINER:/app/app.jar" /var/www/html/bin/cbackup.jar 2>/dev/null; then
+                    echo "✓ Copied cbackup.jar from worker container"
+                    break
+                fi
+            fi
+        fi
+        
+        # Alternative: Try to copy from worker build directory (if building locally)
+        if [ -f "/var/www/html/../worker/target/cbackup.jar" ]; then
+            cp /var/www/html/../worker/target/cbackup.jar /var/www/html/bin/cbackup.jar
+            echo "✓ Copied cbackup.jar from worker build directory"
+            break
+        fi
+        
+        ATTEMPT=$((ATTEMPT + 1))
+        if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+            echo "  Waiting for worker container... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
+            sleep 1
+        fi
+    done
+    
+    # Check if file was created
+    if [ ! -f "/var/www/html/bin/cbackup.jar" ]; then
+        echo "⚠ cbackup.jar not found after $MAX_ATTEMPTS attempts"
+        echo "  Worker container might not be running or file is not available"
+        echo "  You can copy it manually: docker compose cp worker:/app/app.jar core/bin/cbackup.jar"
     fi
 fi
 

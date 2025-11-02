@@ -121,6 +121,9 @@ services:
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-cbackup}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-cbackup_password}
       JAVA_OPTS: ${JAVA_OPTS:--Xmx512m -Xms256m}
+    volumes:
+      # Share bin directory so web container can access cbackup.jar
+      - ./core/bin:/shared/bin:rw
     depends_on:
       db:
         condition: service_healthy
@@ -128,6 +131,14 @@ services:
         condition: service_started
     networks:
       - cbackup_network
+    # Copy JAR to shared location after container starts
+    command: >
+      sh -c "
+      if [ ! -f /shared/bin/cbackup.jar ]; then
+        cp /app/app.jar /shared/bin/cbackup.jar || true
+      fi &&
+      java -jar app.jar
+      "
 
 volumes:
   db_data:
