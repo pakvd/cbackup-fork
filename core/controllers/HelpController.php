@@ -201,6 +201,13 @@ class HelpController extends Controller
             ob_start();
             try {
                 error_log("Step 19.2: Calling render() method");
+                
+                // CRITICAL: Disable layout to prevent DB queries in sidebar/header
+                // Save original layout and restore after render
+                $originalLayout = $this->layout;
+                $this->layout = false; // No layout = no sidebar/header = no DB queries
+                error_log("Step 19.3: Layout disabled");
+                
                 $result = $this->render('about', [
                     'phpinfo'      => $phpinfo,
                     'SERVER'       => $_SERVER,
@@ -210,6 +217,10 @@ class HelpController extends Controller
                     'dbVersion'    => $dbVersion,
                     'dbDriverName' => $dbDriverName,
                 ]);
+                
+                // Restore layout
+                $this->layout = $originalLayout;
+                error_log("Step 19.4: Layout restored");
                 
                 $renderCompleted = true;
                 $renderElapsed = microtime(true) - $renderStart;
