@@ -29,9 +29,22 @@ class MysqlSchema extends BaseSchema
      */
     public function loadTableSchema($name)
     {
-        // Simplified approach: just use parent and reload foreign keys safely
+        // Set up error handler to catch "Undefined array key" errors silently
+        $constraintNameError = false;
+        
+        set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$constraintNameError) {
+            if (strpos($errstr, 'constraint_name') !== false || 
+                strpos($errstr, 'Undefined array key') !== false) {
+                $constraintNameError = true;
+                return true; // Suppress error
+            }
+            return false; // Let other errors through
+        }, E_ALL & ~E_DEPRECATED);
+        
         try {
+            // Try to load table using parent method
             $table = parent::loadTableSchema($name);
+            restore_error_handler();
             
             // If we got a table, reload foreign keys safely to fix any constraint_name issues
             if ($table !== null) {
@@ -41,13 +54,54 @@ class MysqlSchema extends BaseSchema
                     // If foreign keys loading fails, set empty array and continue
                     $table->foreignKeys = [];
                 }
+                return $table;
             }
             
-            return $table;
+            // If parent returned null, check if table actually exists
+            // If it exists but schema loading failed, it's likely due to constraint_name error
+            if ($constraintNameError) {
+                // Check if table exists
+                try {
+                    $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
+                    $tableExists = $this->db->createCommand()
+                        ->select('COUNT(*)')
+                        ->from('information_schema.tables')
+                        ->where([
+                            'table_schema' => $dbName,
+                            'table_name' => $name
+                        ])
+                        ->queryScalar() > 0;
+                    
+                    if ($tableExists) {
+                        // Table exists but schema loading failed - try again with full error suppression
+                        set_error_handler(function() { return true; }, E_ALL);
+                        $table = parent::loadTableSchema($name);
+                        restore_error_handler();
+                        
+                        if ($table !== null) {
+                            // Load foreign keys safely
+                            try {
+                                $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
+                            } catch (\Exception $fkEx) {
+                                $table->foreignKeys = [];
+                            }
+                            return $table;
+                        }
+                    }
+                } catch (\Throwable $checkEx) {
+                    // Ignore check errors
+                }
+            }
+            
+            // Table doesn't exist or we can't load it
+            return null;
             
         } catch (\Exception $e) {
+            restore_error_handler();
+            
             // If error contains constraint_name, try to handle it
-            if (strpos($e->getMessage(), 'constraint_name') !== false || 
+            if ($constraintNameError || 
+                strpos($e->getMessage(), 'constraint_name') !== false || 
                 strpos($e->getMessage(), 'Undefined array key') !== false) {
                 
                 // Try one more time with error suppression
@@ -73,28 +127,43 @@ class MysqlSchema extends BaseSchema
             
             throw $e;
         } catch (\Error $e) {
+            restore_error_handler();
+            
             // PHP 8.0+ throws Error for "Undefined array key", not Exception
-            if (strpos($e->getMessage(), 'constraint_name') !== false || 
+            if ($constraintNameError || 
+                strpos($e->getMessage(), 'constraint_name') !== false || 
                 strpos($e->getMessage(), 'Undefined array key') !== false) {
                 
-                // Try one more time with error suppression
+                // Check if table exists first
                 try {
-                    set_error_handler(function() { return true; }, E_ALL);
-                    $table = parent::loadTableSchema($name);
-                    restore_error_handler();
+                    $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
+                    $tableExists = $this->db->createCommand()
+                        ->select('COUNT(*)')
+                        ->from('information_schema.tables')
+                        ->where([
+                            'table_schema' => $dbName,
+                            'table_name' => $name
+                        ])
+                        ->queryScalar() > 0;
                     
-                    if ($table !== null) {
-                        // Load foreign keys safely
-                        try {
-                            $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
-                        } catch (\Exception $fkEx) {
-                            $table->foreignKeys = [];
+                    if ($tableExists) {
+                        // Try one more time with error suppression
+                        set_error_handler(function() { return true; }, E_ALL);
+                        $table = parent::loadTableSchema($name);
+                        restore_error_handler();
+                        
+                        if ($table !== null) {
+                            // Load foreign keys safely
+                            try {
+                                $table->foreignKeys = $this->loadTableForeignKeysSafe($table);
+                            } catch (\Exception $fkEx) {
+                                $table->foreignKeys = [];
+                            }
+                            return $table;
                         }
-                        return $table;
                     }
-                } catch (\Throwable $e2) {
-                    // If still fails, return null (table might not exist)
-                    return null;
+                } catch (\Throwable $checkEx) {
+                    // Ignore check errors
                 }
             }
             
