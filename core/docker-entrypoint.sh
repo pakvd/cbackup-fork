@@ -49,12 +49,13 @@ if [ ! -d "/var/www/html/vendor" ]; then
             
             # Install dependencies - capture output and error
             echo "Installing dependencies..."
-            echo "Running: $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
+            echo "Running: $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs"
             
             # Capture both stdout and stderr
             # Use --ignore-platform-reqs to ignore missing ext-mcrypt (deprecated in PHP 7.2+)
             # Use --no-scripts to avoid running scripts that might fail
-            if OUTPUT=$($COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1); then
+            # Use --no-plugins to avoid plugin compatibility issues with Composer 2.8+
+            if OUTPUT=$($COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs 2>&1); then
                 echo "Composer command completed with exit code 0"
                 echo "$OUTPUT" | tail -20
                 
@@ -73,11 +74,12 @@ if [ ! -d "/var/www/html/vendor" ]; then
                 echo "=== End of Composer error output ==="
                 
                 # Try composer update if install failed due to lock file issues
-                if echo "$OUTPUT" | grep -q "composer update" || echo "$OUTPUT" | grep -q "compatible set of packages"; then
+                # Also try if vendor directory doesn't exist even if install partially succeeded
+                if echo "$OUTPUT" | grep -q "composer update" || echo "$OUTPUT" | grep -q "compatible set of packages" || [ ! -d "/var/www/html/vendor" ]; then
                     echo "=== Trying composer update to fix lock file issues ==="
-                    echo "Running: $COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
+                    echo "Running: $COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs"
                     
-                    if UPDATE_OUTPUT=$($COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1); then
+                    if UPDATE_OUTPUT=$($COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs 2>&1); then
                         echo "Composer update completed successfully"
                         echo "$UPDATE_OUTPUT" | tail -30
                         
@@ -96,6 +98,11 @@ if [ ! -d "/var/www/html/vendor" ]; then
                         echo "The application may not work until dependencies are installed."
                     fi
                 else
+                    # Even if composer install failed, check if vendor was created (sometimes it partially succeeds)
+                    if [ ! -d "/var/www/html/vendor" ]; then
+                        echo "=== Trying final composer install without plugins ==="
+                        $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs 2>&1 | tail -20 || true
+                    fi
                     echo "The application may not work until dependencies are installed."
                 fi
             fi
