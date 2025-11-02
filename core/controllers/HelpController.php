@@ -210,22 +210,17 @@ class HelpController extends Controller
             try {
                 error_log("Step 19.2: Calling render() method");
                 
-                // CRITICAL: Use render() but prevent recursion by ensuring layout doesn't call actionAbout again
-                error_log("Step 19.3: Starting render with layout");
+                // CRITICAL: Render content first, then wrap in layout using renderContent
+                // This avoids recursion issues with render()
+                error_log("Step 19.3: Rendering content with renderPartial");
                 
                 // Ensure schema cache is still disabled during render
                 if (isset($app->db)) {
                     $app->db->enableSchemaCache = false;
                 }
                 
-                // Use render() which will use layout, but sidebar/header are already fixed
-                // Set a flag to prevent recursion if somehow actionAbout is called again
-                $originalActionId = $this->action->id ?? '';
-                if ($originalActionId !== 'about') {
-                    error_log("WARNING: Action ID changed from 'about' to '{$originalActionId}'");
-                }
-                
-                $result = $this->render('about', [
+                // First render the content without layout
+                $content = $this->renderPartial('about', [
                     'phpinfo'      => $phpinfo,
                     'SERVER'       => $_SERVER,
                     'perms'        => $perms,
@@ -233,8 +228,13 @@ class HelpController extends Controller
                     'extensions'   => $extensions,
                     'dbVersion'    => $dbVersion,
                     'dbDriverName' => $dbDriverName,
-                ]);
-                error_log("Step 19.4: Render completed");
+                ], true); // true = return as string
+                error_log("Step 19.4: Content rendered");
+                
+                // Now wrap in layout using renderContent (which uses layout but doesn't call action)
+                error_log("Step 19.5: Wrapping content in layout");
+                $result = $this->renderContent($content);
+                error_log("Step 19.6: Layout wrap completed");
                 
                 $renderCompleted = true;
                 $renderElapsed = microtime(true) - $renderStart;
