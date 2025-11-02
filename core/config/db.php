@@ -23,7 +23,8 @@ return [
 	'schemaMap' => [
 		'mysql' => 'app\components\MysqlSchema',
 	],
-	// Disable schema cache temporarily to debug constraint_name issues
-	// This ensures our custom Schema class is always used
-	'enableSchemaCache' => false,
+	// Enable schema cache to improve performance and avoid repeated information_schema queries
+	'enableSchemaCache' => !defined('YII_DEBUG') || !YII_DEBUG,
+	'schemaCache' => 'cache',
+	'schemaCacheDuration' => 86400, // 24 hours
 ];
