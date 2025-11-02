@@ -48,11 +48,18 @@ class HelpController extends Controller
 
         $sysinfo = new Sysinfo();
 
+        // Cache plugins list to avoid repeated schema loading on every page load
+        // Plugin list rarely changes, so cache for 5 minutes
+        // Use asArray(false) to get ActiveRecords but skip unnecessary processing
+        $plugins = Yii::$app->cache->getOrSet('help_about_plugins', function() {
+            return Plugin::find()->all();
+        }, 300); // Cache for 5 minutes
+
         return $this->render('about', [
             'phpinfo'    => $sysinfo->getPhpInfo(),
             'SERVER'     => $_SERVER, // Pass as SERVER without $ prefix for display
             'perms'      => Install::checkPermissions(),
-            'plugins'    => Plugin::find()->all(),
+            'plugins'    => $plugins,
             'extensions' => Install::getPhpExtensions()
         ]);
 

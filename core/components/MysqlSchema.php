@@ -29,77 +29,16 @@ class MysqlSchema extends BaseSchema
      */
     public function getTableSchema($name, $refresh = false)
     {
+        // Simplified approach: use parent's caching logic but with our loadTableSchema
+        // This avoids extra checks that slow down the application
         // If refresh is requested, bypass cache
         if ($refresh) {
             return $this->loadTableSchema($name);
         }
         
-        // Check cache first
-        if ($this->db->enableSchemaCache && $this->db->schemaCache !== null) {
-            $cache = is_string($this->db->schemaCache) ? \Yii::$app->get($this->db->schemaCache) : $this->db->schemaCache;
-            if ($cache instanceof \yii\caching\Cache) {
-                $cacheKey = $this->getCacheKey('table:' . $name);
-                $table = $cache->get($cacheKey);
-                
-                // cache->get() returns false on cache miss, null if null was cached
-                // If we have a cached table schema, return it
-                if ($table !== false && $table !== null) {
-                    return $table;
-                }
-                
-                // If cache miss (false) or cached null, verify table exists
-                // Cache miss means we haven't checked yet, cached null might be wrong
-                // Use faster method: try to query table directly instead of information_schema
-                try {
-                    // Faster check: try to query table directly (LIMIT 1 is very fast)
-                    // This avoids slow information_schema queries
-                    try {
-                        $this->db->createCommand("SELECT 1 FROM `{$name}` LIMIT 1")->queryScalar();
-                        // Table exists - clear potentially incorrect null cache and load schema
-                        if ($table === null) {
-                            $cache->delete($cacheKey);
-                        }
-                        return $this->loadTableSchema($name);
-                    } catch (\yii\db\Exception $tableEx) {
-                        // If query fails, table might not exist or have wrong name
-                        // Fallback to information_schema check only if it's a "table doesn't exist" error
-                        if (strpos($tableEx->getMessage(), "doesn't exist") !== false || 
-                            strpos($tableEx->getMessage(), "Unknown table") !== false ||
-                            $tableEx->getCode() == '42S02') {
-                            // Table doesn't exist
-                            return null;
-                        }
-                        
-                        // Other error (permissions, connection, etc) - try information_schema
-                        $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
-                        $tableExists = $this->db->createCommand()
-                            ->select('COUNT(*)')
-                            ->from('information_schema.tables')
-                            ->where([
-                                'table_schema' => $dbName,
-                                'table_name' => $name
-                            ])
-                            ->queryScalar() > 0;
-                        
-                        if ($tableExists) {
-                            if ($table === null) {
-                                $cache->delete($cacheKey);
-                            }
-                            return $this->loadTableSchema($name);
-                        }
-                        
-                        return null;
-                    }
-                } catch (\Throwable $e) {
-                    // If all checks fail, try to load schema normally
-                    // This handles connection issues gracefully
-                    return $this->loadTableSchema($name);
-                }
-            }
-        }
-        
-        // No cache or cache disabled, load schema directly
-        return $this->loadTableSchema($name);
+        // Use parent's caching mechanism - it's already optimized
+        // We just override loadTableSchema to fix constraint_name issues
+        return parent::getTableSchema($name, $refresh);
     }
     
     /**
