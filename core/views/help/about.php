@@ -370,14 +370,35 @@ error_log("=== about.php: Before HTML start ===");
                     ?>
                         </tbody>
                     </table>
+                    <?php 
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Table tab_1 closed, before tab_2\n", FILE_APPEND | LOCK_EX);
+                        error_log("=== about.php: Table tab_1 closed, before tab_2 ===");
+                    ?>
                 </div>
                 <div class="tab-pane fade in" id="tab_2">
+                    <?php 
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Tab_2 started\n", FILE_APPEND | LOCK_EX);
+                        error_log("=== about.php: Tab_2 started ===");
+                    ?>
                     <?php if( mb_stripos(PHP_OS, 'Linux') === false ) : ?>
                         <div class="alert alert-warning">
                             <p><?= Yii::t('help', "We don't officially support cBackup in non-Linux environment yet. Use it at own and sole discretion.") ?></p>
                         </div>
                     <?php endif; ?>
-                    <?php if(\app\models\Install::checkWorldAccess()): ?>
+                    <?php 
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before Install::checkWorldAccess()\n", FILE_APPEND | LOCK_EX);
+                        error_log("=== about.php: Before Install::checkWorldAccess() ===");
+                        try {
+                            $worldAccess = \app\models\Install::checkWorldAccess();
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Install::checkWorldAccess() returned: " . ($worldAccess ? 'true' : 'false') . "\n", FILE_APPEND | LOCK_EX);
+                        } catch (\Throwable $e) {
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Install::checkWorldAccess() ERROR: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
+                            error_log("=== about.php: Install::checkWorldAccess() ERROR: " . $e->getMessage());
+                            $worldAccess = false;
+                        }
+                        error_log("=== about.php: After Install::checkWorldAccess() ===");
+                    ?>
+                    <?php if($worldAccess ?? false): ?>
                         <div class="alert alert-danger">
                             <p>
                                 <?php
@@ -387,6 +408,10 @@ error_log("=== about.php: Before HTML start ===");
                             </p>
                         </div>
                     <?php endif; ?>
+                    <?php 
+                        @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before permissions table, perms count: " . (is_array($perms) ? count($perms) : 'N/A') . "\n", FILE_APPEND | LOCK_EX);
+                        error_log("=== about.php: Before permissions table ===");
+                    ?>
                     <table class="table">
                         <tr class="info text-bolder">
                             <td colspan="4"><?= Yii::t('install', 'Directory and file permissions') ?></td>
@@ -397,7 +422,14 @@ error_log("=== about.php: Before HTML start ===");
                             <th class="text-right">W</th>
                             <th class="text-right">X</th>
                         </tr>
-                        <?php foreach ($perms as $perm): ?>
+                        <?php 
+                            @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Before perms foreach loop\n", FILE_APPEND | LOCK_EX);
+                            error_log("=== about.php: Before perms foreach loop ===");
+                            $permIndex = 0;
+                            foreach ($perms as $perm): 
+                                $permIndex++;
+                                @file_put_contents('/tmp/about_template.log', date('H:i:s.') . substr(microtime(), 2, 6) . " Processing perm #{$permIndex}\n", FILE_APPEND | LOCK_EX);
+                        ?>
                             <?php if(is_null($perm['path'])) continue; ?>
                             <tr>
                                 <?php
