@@ -725,6 +725,14 @@ $this->registerJsFile('@web/js/config/script.js', ['depends' => \app\assets\Alph
                     <div class="box-header with-border">
                         <i class="fa fa-database"></i>
                         <h3 class="box-title"><?= Yii::t('config', 'Daemon credentials') ?></h3>
+                        <div class="box-tools pull-right">
+                            <?= Html::button('<i class="fa fa-refresh"></i> ' . Yii::t('config', 'Sync application.properties'), [
+                                'id' => 'sync_properties',
+                                'class' => 'btn btn-info btn-sm',
+                                'data-url' => Url::to(['config/ajax-sync-properties']),
+                                'title' => Yii::t('config', 'Synchronize application.properties file with database values'),
+                            ]) ?>
+                        </div>
                     </div>
                     <div class="box-body">
                         <div class="row">

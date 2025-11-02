@@ -46,6 +46,9 @@ $config = [
         'asset' => [
             'class' => 'app\commands\AssetController',
         ],
+        'config' => [
+            'class' => 'app\commands\ConfigController',
+        ],
     ],
 
     'modules' => [

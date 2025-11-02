@@ -103,10 +103,11 @@ $(document).on('ready pjax:end', function() {
     });
 
     /** Reinit git settings on button click via Ajax */
-    $('#reinit_git, #send_test_mail').click(function() {
+    $('#reinit_git, #send_test_mail, #sync_properties').click(function() {
 
         var url      = $(this).data('url');
-        var btn_lock = Ladda.create(document.querySelector('#' + $(this)[0].id));
+        var btn_id   = $(this)[0].id;
+        var btn_lock = Ladda.create(document.querySelector('#' + btn_id));
         toastr.clear();
 
         //noinspection JSUnusedGlobalSymbols
@@ -117,8 +118,15 @@ $(document).on('ready pjax:end', function() {
                 btn_lock.start();
             },
             success: function (data) {
+                var response = isJson(data) ? JSON.parse(data) : {status: 'error', msg: data};
                 if (isJson(data)) {
-                    showStatus(data);
+                    showStatus(response);
+                    // Reload page after successful sync to clear warning
+                    if (btn_id === 'sync_properties' && response.status === 'success') {
+                        setTimeout(function() {
+                            $.pjax.reload({container: '#config-pjax', url: $(location).attr('href'), timeout: 10000});
+                        }, 1500);
+                    }
                 } else {
                     toastr.warning(data, '', {timeOut: 0, closeButton: true});
                 }

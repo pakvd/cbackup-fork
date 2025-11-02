@@ -340,46 +340,79 @@ class Config extends ActiveRecord
 
         // If file doesn't exist, try to sync it
         if (!file_exists($file)) {
-            static::syncApplicationProperties($data);
-            // Re-check after sync
+            if (static::syncApplicationProperties($data)) {
+                // File created successfully, check again
+                if (file_exists($file)) {
+                    // File was created, now validate
+                    $props = @parse_ini_file($file, false, INI_SCANNER_RAW);
+                    if (!empty($props)) {
+                        foreach ($data as $key => $value) {
+                            $match = [];
+                            if (preg_match('/^javaScheduler(\w+)$/', $key, $match)) {
+                                $match = array_filter($match);
+                                $match = array_values($match);
+                                $match = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
+                                $pkey  = "sshd.shell.$match";
+                                if (array_key_exists($pkey, $props) && $props[$pkey] != $value) {
+                                    $res[] = $pkey;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // If file still doesn't exist after sync attempt, skip check
             if (!file_exists($file)) {
-                return; // Could not create file, skip check
+                return;
             }
         }
 
-        $props = parse_ini_file($file, false, INI_SCANNER_RAW);
+        // Read and parse existing file
+        $props = @parse_ini_file($file, false, INI_SCANNER_RAW);
 
-        if (!empty($props)) {
+        if (empty($props)) {
+            // File exists but can't be parsed, try to recreate it
+            if (static::syncApplicationProperties($data)) {
+                $props = @parse_ini_file($file, false, INI_SCANNER_RAW);
+            }
+            if (empty($props)) {
+                return; // Still can't parse, skip check
+            }
+        }
 
-            foreach ($data as $key => $value) {
+        // Check for mismatches
+        foreach ($data as $key => $value) {
+            $match = [];
 
-                $match = [];
+            if (preg_match('/^javaScheduler(\w+)$/', $key, $match)) {
 
-                if (preg_match('/^javaScheduler(\w+)$/', $key, $match)) {
+                $match = array_filter($match);
+                $match = array_values($match);
+                $match = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
+                $pkey  = "sshd.shell.$match";
 
-                    $match = array_filter($match);
-                    $match = array_values($match);
-                    $match = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
-                    $pkey  = "sshd.shell.$match";
-
+                if (!empty($match)) {
+                    // Check if property exists in file
                     if (array_key_exists($pkey, $props)) {
+                        // Property exists, check if value matches
                         if ($props[$pkey] != $value) {
                             $res[] = $pkey;
                         }
+                    } else {
+                        // Property doesn't exist in file, add it to mismatch list
+                        $res[] = $pkey;
                     }
-
                 }
-
             }
-
         }
 
-        // If there's a mismatch, try to sync and check again
+        // If there's a mismatch, try to sync
         if (!empty($res)) {
             if (static::syncApplicationProperties($data)) {
-                // Re-check after sync
-                $props = parse_ini_file($file, false, INI_SCANNER_RAW);
+                // Re-read file after sync
+                $props = @parse_ini_file($file, false, INI_SCANNER_RAW);
                 if (!empty($props)) {
+                    // Re-check after sync
                     $res = [];
                     foreach ($data as $key => $value) {
                         $match = [];
@@ -388,8 +421,15 @@ class Config extends ActiveRecord
                             $match = array_values($match);
                             $match = array_key_exists(1, $match) ? mb_strtolower($match[1]) : '';
                             $pkey  = "sshd.shell.$match";
-                            if (array_key_exists($pkey, $props) && $props[$pkey] != $value) {
-                                $res[] = $pkey;
+                            if (!empty($match)) {
+                                if (array_key_exists($pkey, $props)) {
+                                    if ($props[$pkey] != $value) {
+                                        $res[] = $pkey;
+                                    }
+                                } else {
+                                    // Property still missing after sync
+                                    $res[] = $pkey;
+                                }
                             }
                         }
                     }
@@ -397,6 +437,7 @@ class Config extends ActiveRecord
             }
         }
 
+        // Only show warning if there are still mismatches after sync attempt
         if (!empty($res)) {
             \Y::flash('warning', Yii::t('config', 'Mismatched data in application.properties and database for following keys: <b>{0}</b>', join(', ', $res)));
         }

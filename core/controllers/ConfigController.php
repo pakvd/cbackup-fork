@@ -57,7 +57,8 @@ class ConfigController extends Controller
                 'class' => AjaxFilter::class,
                 'only'  => [
                     'ajax-init-repo',
-                    'ajax-reinit-git-settings'
+                    'ajax-reinit-git-settings',
+                    'ajax-sync-properties'
                 ]
             ],
         ];
@@ -217,6 +218,47 @@ class ConfigController extends Controller
                 break;
             }
 
+        }
+
+        return Json::encode(['status' => $status, 'msg' => $message]);
+
+    }
+
+
+    /**
+     * Sync application.properties with database via Ajax
+     *
+     * @return string
+     */
+    public function actionAjaxSyncProperties()
+    {
+
+        $status  = 'error';
+        $message = Yii::t('app', 'An error occurred while processing your request');
+
+        if (Yii::$app->request->isAjax) {
+            try {
+
+                $config = new Config();
+                $data   = ArrayHelper::map($config::find()->asArray()->all(), 'key', 'value');
+
+                if (empty($data)) {
+                    $message = Yii::t('config', 'No configuration data found in database');
+                } else {
+                    $result = Config::syncApplicationProperties($data);
+
+                    if ($result) {
+                        $status  = 'success';
+                        $message = Yii::t('config', 'application.properties synchronized successfully');
+                    } else {
+                        $file = Yii::$app->basePath.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'application.properties';
+                        $message = Yii::t('config', 'Failed to synchronize. Check file permissions for: {file}', ['file' => $file]);
+                    }
+                }
+
+            } catch (\Exception $e) {
+                $message = Yii::t('app', 'Error: {error}', ['error' => $e->getMessage()]);
+            }
         }
 
         return Json::encode(['status' => $status, 'msg' => $message]);
