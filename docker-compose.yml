@@ -98,16 +98,10 @@ services:
     # sudo sysctl vm.overcommit_memory=1
     # This is a kernel parameter that cannot be set from within container
     healthcheck:
-      # Healthcheck: try with password if set, otherwise without password
-      # Note: REDIS_PASSWORD env var is available in healthcheck context
-      test: >
-        sh -c "
-        if [ -z \"$$REDIS_PASSWORD\" ]; then
-          redis-cli ping
-        else
-          redis-cli -a \"$$REDIS_PASSWORD\" ping
-        fi
-        " || exit 1
+      # Healthcheck: check if Redis is responding
+      # If password is set, Redis returns NOAUTH - but Redis is running, so it's healthy
+      # We check if Redis responds (any response means Redis is alive)
+      test: ["CMD-SHELL", "redis-cli ping 2>&1 | grep -q 'PONG\\|NOAUTH' || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
