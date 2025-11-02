@@ -29,6 +29,9 @@ class MysqlSchema extends BaseSchema
      */
     public function loadTableSchema($name)
     {
+        // Debug: log that our custom Schema is being used
+        error_log("MysqlSchema::loadTableSchema called for table: $name");
+        
         // Set up error handler to catch "Undefined array key" errors
         // Use E_ALL to catch all types of errors, not just warnings/notices
         $errorOccurred = false;
@@ -57,6 +60,8 @@ class MysqlSchema extends BaseSchema
             
             // Restore error handler
             restore_error_handler();
+            
+            error_log("MysqlSchema::loadTableSchema - parent returned: " . ($table !== null ? "table object" : "NULL"));
             
             // If we got a table, ensure foreign keys are loaded safely
             if ($table !== null) {
@@ -116,7 +121,26 @@ class MysqlSchema extends BaseSchema
                 strpos($e->getMessage(), 'constraint_name') !== false || 
                 strpos($e->getMessage(), 'Undefined array key') !== false) {
                 
-                // Try one more time with full error suppression
+                // Check if table exists first
+                $tableExists = false;
+                try {
+                    $tableExists = $this->db->createCommand()
+                        ->select('COUNT(*)')
+                        ->from('information_schema.tables')
+                        ->where([
+                            'table_schema' => $this->db->createCommand('SELECT DATABASE()')->queryScalar(),
+                            'table_name' => $name
+                        ])
+                        ->queryScalar() > 0;
+                } catch (\Throwable $checkEx) {
+                    // Ignore check errors
+                }
+                
+                if (!$tableExists) {
+                    return null; // Table doesn't exist
+                }
+                
+                // Table exists but schema loading failed - try again with full error suppression
                 try {
                     set_error_handler(function() { return true; }, E_ALL);
                     $table = parent::loadTableSchema($name);
@@ -132,7 +156,8 @@ class MysqlSchema extends BaseSchema
                         return $table;
                     }
                 } catch (\Throwable $e2) {
-                    // If still fails, return null (table might not exist)
+                    // If still fails but table exists, return null anyway
+                    // The table schema might be corrupted or we can't load it
                     return null;
                 }
             }
