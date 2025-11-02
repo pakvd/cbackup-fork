@@ -20,6 +20,64 @@ use yii\db\TableSchema;
 class MysqlSchema extends BaseSchema
 {
     /**
+     * Returns the metadata for the specified table.
+     * Override to check cache for null values and validate table existence.
+     * 
+     * @param string $name table name
+     * @param bool $refresh whether to reload the table schema even if it is found in cache.
+     * @return TableSchema|null driver dependent table metadata. Null if the table does not exist.
+     */
+    public function getTableSchema($name, $refresh = false)
+    {
+        // If refresh is requested, bypass cache
+        if ($refresh) {
+            return $this->loadTableSchema($name);
+        }
+        
+        // Check cache first
+        if ($this->db->enableSchemaCache && $this->db->schemaCache !== null) {
+            $cache = is_string($this->db->schemaCache) ? \Yii::$app->get($this->db->schemaCache) : $this->db->schemaCache;
+            if ($cache instanceof \yii\caching\Cache) {
+                $cacheKey = $this->getCacheKey('table:' . $name);
+                $table = $cache->get($cacheKey);
+                
+                // If cached value is null, verify table actually exists before returning null
+                if ($table === null || $table === false) {
+                    try {
+                        $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
+                        $tableExists = $this->db->createCommand()
+                            ->select('COUNT(*)')
+                            ->from('information_schema.tables')
+                            ->where([
+                                'table_schema' => $dbName,
+                                'table_name' => $name
+                            ])
+                            ->queryScalar() > 0;
+                        
+                        // If table exists but cache has null, reload schema
+                        if ($tableExists) {
+                            // Clear cache and reload
+                            $cache->delete($cacheKey);
+                            return $this->loadTableSchema($name);
+                        }
+                    } catch (\Throwable $e) {
+                        // If check fails, continue to normal flow
+                    }
+                    
+                    // Table doesn't exist, return null
+                    return null;
+                }
+                
+                // Cached table schema exists, return it
+                return $table;
+            }
+        }
+        
+        // No cache or cache miss, load schema
+        return $this->loadTableSchema($name);
+    }
+    
+    /**
      * Loads the metadata for the specified table.
      * 
      * Override to catch constraint_name errors and handle them gracefully.
