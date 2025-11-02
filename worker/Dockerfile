@@ -20,13 +20,19 @@ WORKDIR /app
 # Copy built JAR
 COPY --from=build /app/target/cbackup.jar app.jar
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN chown -R appuser:appuser /app
 
-USER appuser
+# Note: USER is set to root temporarily in docker-compose.yml
+# Entrypoint script will switch to appuser before starting Java
+USER root
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
