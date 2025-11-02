@@ -16,6 +16,9 @@ make up
 
 # 4. Открыть в браузере
 # http://localhost:8080
+
+# 5. Проверить синхронизацию (после установки через веб)
+docker compose exec web php yii sync-properties/check
 ```
 
 ## Все команды
