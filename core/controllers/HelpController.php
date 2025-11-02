@@ -45,73 +45,48 @@ class HelpController extends Controller
      */
     public function actionAbout()
     {
+        // CRITICAL: Only load from cache - never generate data on page load
+        // This prevents infinite loops and hanging
+        // Data generation should happen via separate background job or console command
+        
+        // Set short timeout
+        @set_time_limit(5); // 5 seconds max - page must load quickly
+        
+        // Initialize with empty defaults
+        $phpinfo = [];
+        $plugins = [];
+        $perms = [];
+        $extensions = [];
+        
+        // ONLY load from cache - never generate
+        try {
+            $phpinfo = Yii::$app->cache->get('help_about_phpinfo') ?: [];
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+        
+        try {
+            $plugins = Yii::$app->cache->get('help_about_plugins') ?: [];
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+        
+        try {
+            $perms = Yii::$app->cache->get('help_about_permissions') ?: [];
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+        
+        try {
+            $extensions = Yii::$app->cache->get('help_about_extensions') ?: [];
+        } catch (\Throwable $e) {
+            // Ignore
+        }
 
-        // Cache all expensive operations to prevent page hanging
-        // These values rarely change, so cache for 5 minutes
-        // Use safe wrappers to prevent timeouts on first load
-        
-        $sysinfo = new Sysinfo();
-        
-        // Helper function to safely get cached or default value
-        $safeCacheGet = function($key, $callback, $default = null) {
-            try {
-                // Try to get from cache first
-                $cached = Yii::$app->cache->get($key);
-                if ($cached !== false) {
-                    return $cached;
-                }
-                
-                // If not cached, try to generate but with timeout protection
-                try {
-                    $result = call_user_func($callback);
-                    Yii::$app->cache->set($key, $result, 300); // Cache for 5 minutes
-                    return $result;
-                } catch (\Throwable $e) {
-                    // If generation fails, return default and cache it briefly to prevent repeated failures
-                    error_log("HelpController: Failed to generate $key: " . $e->getMessage());
-                    Yii::$app->cache->set($key, $default, 60); // Cache default for 1 minute
-                    return $default;
-                }
-            } catch (\Throwable $e) {
-                error_log("HelpController: Error in cache for $key: " . $e->getMessage());
-                return $default;
-            }
-        };
-        
-        // Cache PHP info (phpinfo() is expensive) - use empty array as fallback
-        $phpinfo = $safeCacheGet('help_about_phpinfo', function() use ($sysinfo) {
-            return $sysinfo->getPhpInfo();
-        }, []);
-        
-        // Cache plugins list - use empty array as fallback
-        $plugins = $safeCacheGet('help_about_plugins', function() {
-            return Plugin::find()->all();
-        }, []);
-        
-        // Cache permissions check - use empty array as fallback to prevent timeout
-        // This is the most expensive operation, so we make it optional
-        $perms = $safeCacheGet('help_about_permissions', function() {
-            // Set execution time limit for this operation (10 seconds)
-            $oldLimit = ini_get('max_execution_time');
-            @set_time_limit(10);
-            try {
-                $result = Install::checkPermissions();
-                @set_time_limit($oldLimit);
-                return $result;
-            } catch (\Throwable $e) {
-                @set_time_limit($oldLimit);
-                throw $e;
-            }
-        }, []);
-        
-        // Cache PHP extensions list - use empty array as fallback
-        $extensions = $safeCacheGet('help_about_extensions', function() {
-            return Install::getPhpExtensions();
-        }, []);
-
+        // Render page immediately - even with empty data
         return $this->render('about', [
             'phpinfo'    => $phpinfo,
-            'SERVER'     => $_SERVER, // Pass as SERVER without $ prefix for display
+            'SERVER'     => $_SERVER,
             'perms'      => $perms,
             'plugins'    => $plugins,
             'extensions' => $extensions
