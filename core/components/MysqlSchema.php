@@ -41,39 +41,46 @@ class MysqlSchema extends BaseSchema
                 $cacheKey = $this->getCacheKey('table:' . $name);
                 $table = $cache->get($cacheKey);
                 
-                // If cached value is null, verify table actually exists before returning null
-                if ($table === null || $table === false) {
-                    try {
-                        $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
-                        $tableExists = $this->db->createCommand()
-                            ->select('COUNT(*)')
-                            ->from('information_schema.tables')
-                            ->where([
-                                'table_schema' => $dbName,
-                                'table_name' => $name
-                            ])
-                            ->queryScalar() > 0;
-                        
-                        // If table exists but cache has null, reload schema
-                        if ($tableExists) {
-                            // Clear cache and reload
+                // cache->get() returns false on cache miss, null if null was cached
+                // If we have a cached table schema, return it
+                if ($table !== false && $table !== null) {
+                    return $table;
+                }
+                
+                // If cache miss (false) or cached null, verify table exists
+                // Cache miss means we haven't checked yet, cached null might be wrong
+                try {
+                    $dbName = $this->db->createCommand('SELECT DATABASE()')->queryScalar();
+                    $tableExists = $this->db->createCommand()
+                        ->select('COUNT(*)')
+                        ->from('information_schema.tables')
+                        ->where([
+                            'table_schema' => $dbName,
+                            'table_name' => $name
+                        ])
+                        ->queryScalar() > 0;
+                    
+                    // If table exists, load schema (will be cached automatically by parent)
+                    if ($tableExists) {
+                        // Clear potentially incorrect null cache
+                        if ($table === null) {
                             $cache->delete($cacheKey);
-                            return $this->loadTableSchema($name);
                         }
-                    } catch (\Throwable $e) {
-                        // If check fails, continue to normal flow
+                        return $this->loadTableSchema($name);
                     }
                     
                     // Table doesn't exist, return null
+                    // Note: We don't cache null to avoid stale null values
                     return null;
+                } catch (\Throwable $e) {
+                    // If check fails, try to load schema normally
+                    // This handles connection issues gracefully
+                    return $this->loadTableSchema($name);
                 }
-                
-                // Cached table schema exists, return it
-                return $table;
             }
         }
         
-        // No cache or cache miss, load schema
+        // No cache or cache disabled, load schema directly
         return $this->loadTableSchema($name);
     }
     
