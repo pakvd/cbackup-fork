@@ -202,21 +202,47 @@ class HelpController extends Controller
             try {
                 error_log("Step 19.2: Calling render() method");
                 
-                // Layout is needed for styles and structure
-                // Sidebar and header are already fixed to not query DB on about page
-                error_log("Step 19.3: Rendering with layout (sidebar/header fixed)");
+                // Render with layout but ensure schema cache stays disabled
+                error_log("Step 19.3: Starting render with layout");
                 
-                // Render with layout - sidebar/header won't query DB because we fixed them
-                $result = $this->render('about', [
-                    'phpinfo'      => $phpinfo,
-                    'SERVER'       => $_SERVER,
-                    'perms'        => $perms,
-                    'plugins'      => $safePlugins,
-                    'extensions'   => $extensions,
-                    'dbVersion'    => $dbVersion,
-                    'dbDriverName' => $dbDriverName,
-                ]);
-                error_log("Step 19.4: Render completed");
+                // Ensure schema cache is still disabled during render
+                if (isset($app->db)) {
+                    $app->db->enableSchemaCache = false;
+                }
+                
+                try {
+                    // Render with layout - sidebar/header are fixed to not query DB on about page
+                    $result = $this->render('about', [
+                        'phpinfo'      => $phpinfo,
+                        'SERVER'       => $_SERVER,
+                        'perms'        => $perms,
+                        'plugins'      => $safePlugins,
+                        'extensions'   => $extensions,
+                        'dbVersion'    => $dbVersion,
+                        'dbDriverName' => $dbDriverName,
+                    ]);
+                    error_log("Step 19.4: Render completed successfully");
+                } catch (\Throwable $renderError) {
+                    error_log("Step 19.4 ERROR during render: " . $renderError->getMessage());
+                    error_log("Stack trace: " . $renderError->getTraceAsString());
+                    // Try renderPartial as fallback
+                    try {
+                        error_log("Step 19.4.1: Trying renderPartial as fallback");
+                        $result = $this->renderPartial('about', [
+                            'phpinfo'      => $phpinfo,
+                            'SERVER'       => $_SERVER,
+                            'perms'        => $perms,
+                            'plugins'      => $safePlugins,
+                            'extensions'   => $extensions,
+                            'dbVersion'    => $dbVersion,
+                            'dbDriverName' => $dbDriverName,
+                        ], false);
+                        error_log("Step 19.4.2: renderPartial completed");
+                    } catch (\Throwable $fallbackError) {
+                        error_log("Step 19.4.2 FALLBACK ERROR: " . $fallbackError->getMessage());
+                        throw $renderError; // Throw original error
+                    }
+                }
                 
                 $renderCompleted = true;
                 $renderElapsed = microtime(true) - $renderStart;
