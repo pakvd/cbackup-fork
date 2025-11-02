@@ -72,28 +72,61 @@ class MaintenanceBehavior extends Behavior
      */
     public function checkMaintenance($event)
     {
+        // Skip if not web application (console mode doesn't have Request with URL)
+        if (!($this->owner instanceof \yii\web\Application)) {
+            return;
+        }
+        
         $lock = Yii::$app->basePath . DIRECTORY_SEPARATOR . 'update.lock';
         if (file_exists($lock)) {
-            // Try to get URL, but handle errors gracefully
+            // Try to get URL for ignored routes check, but handle errors gracefully
+            $url = '';
+            $skipUrlCheck = false;
             try {
-                $url = Yii::$app->getRequest()->url;
+                $request = Yii::$app->getRequest();
+                if ($request instanceof \yii\web\Request) {
+                    // Try to get URL using pathInfo instead of url property
+                    // pathInfo doesn't trigger resolveRequestUri() which might fail
+                    try {
+                        $url = $request->pathInfo ?? $request->get('r', '');
+                    } catch (\Throwable $urlEx) {
+                        // If pathInfo also fails, use $_SERVER variables directly
+                        $url = $_SERVER['REQUEST_URI'] ?? $_SERVER['PATH_INFO'] ?? '';
+                    }
+                }
             } catch (\Throwable $e) {
-                // If URL cannot be determined yet, skip ignored routes check
+                // If Request cannot be obtained or any error occurs, skip URL check
+                $skipUrlCheck = true;
                 $url = '';
             }
             
-            foreach ($this->ignoredRoutes as $ignoredRoute) {
-                if ($url && preg_match($ignoredRoute, $url)) {
-                    return;
+            // Check ignored routes only if we have a valid URL
+            if (!$skipUrlCheck && $url) {
+                foreach ($this->ignoredRoutes as $ignoredRoute) {
+                    if (preg_match($ignoredRoute, $url)) {
+                        return;
+                    }
                 }
             }
+            
+            // Set catchAll to redirect to maintenance page
             Yii::$app->catchAll = [$this->redirectUrl];
         } else {
-            // Try to get URL, but handle errors gracefully
+            // Try to get URL for redirect check, but handle errors gracefully
             try {
-                $url = Yii::$app->getRequest()->url;
-                if (preg_match('/' . urlencode($this->redirectUrl) . '/im', urlencode($url))) {
-                    Yii::$app->getResponse()->redirect(Yii::$app->homeUrl)->send();
+                $request = Yii::$app->getRequest();
+                if ($request instanceof \yii\web\Request) {
+                    // Use pathInfo instead of url property to avoid resolveRequestUri() error
+                    try {
+                        $url = $request->pathInfo ?? $request->get('r', '');
+                    } catch (\Throwable $urlEx) {
+                        // If pathInfo fails, use $_SERVER directly
+                        $url = $_SERVER['REQUEST_URI'] ?? $_SERVER['PATH_INFO'] ?? '';
+                    }
+                    
+                    if ($url && preg_match('/' . urlencode($this->redirectUrl) . '/im', urlencode($url))) {
+                        Yii::$app->getResponse()->redirect(Yii::$app->homeUrl)->send();
+                    }
                 }
             } catch (\Throwable $e) {
                 // If URL cannot be determined, skip redirect check
