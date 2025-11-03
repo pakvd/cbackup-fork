@@ -37,8 +37,8 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Install PHP dependencies (will create vendor directory)
 # This will be in the image, but may be overridden by volume mount
-# Use --no-plugins to avoid plugin compatibility issues with Composer 2.8+
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs || true
+# Note: Removed --no-plugins to allow asset-packagist plugin to work with bower-asset packages
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs || true
 
 # Create necessary directories
 RUN mkdir -p /var/www/html/runtime \

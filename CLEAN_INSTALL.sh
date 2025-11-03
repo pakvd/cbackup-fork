@@ -101,9 +101,64 @@ echo ""
 success "Контейнеры запущены"
 echo ""
 
-# Шаг 6: Проверка application.properties
-echo "Шаг 6: Проверка application.properties..."
-sleep 5  # Даем время на создание файла
+# Шаг 6: Автоматическая установка зависимостей Composer
+echo "Шаг 6: Установка зависимостей Composer..."
+echo "Ожидание готовности контейнера..."
+sleep 10  # Даем время на запуск entrypoint скрипта
+
+# Проверяем, установлены ли зависимости
+MAX_RETRIES=3
+RETRY_COUNT=0
+DEPS_INSTALLED=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
+        success "Зависимости Composer установлены (entrypoint скрипт)"
+        DEPS_INSTALLED=true
+        break
+    fi
+    
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        echo "Попытка $RETRY_COUNT/$MAX_RETRIES: ожидание установки зависимостей..."
+        sleep 5
+    fi
+done
+
+# Если не установлены автоматически, устанавливаем вручную
+if [ "$DEPS_INSTALLED" = false ]; then
+    warning "Зависимости не установлены автоматически, устанавливаем вручную..."
+    echo "Попытка: composer install..."
+    if docker compose exec -T web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -15; then
+        if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
+            success "Зависимости установлены через composer install"
+            DEPS_INSTALLED=true
+        fi
+    fi
+    
+    # Если install не сработал, пробуем update
+    if [ "$DEPS_INSTALLED" = false ]; then
+        echo "Попытка: composer update..."
+        if docker compose exec -T web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -15; then
+            if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
+                success "Зависимости установлены через composer update"
+                DEPS_INSTALLED=true
+            fi
+        fi
+    fi
+    
+    # Финальная проверка
+    if [ "$DEPS_INSTALLED" = false ]; then
+        error "Не удалось установить зависимости автоматически"
+        warning "Проверьте логи: docker compose logs web | grep -i composer"
+        warning "Попробуйте вручную: docker compose exec web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
+    fi
+fi
+echo ""
+
+# Шаг 7: Проверка application.properties
+echo "Шаг 7: Проверка application.properties..."
+sleep 2  # Даем время на создание файла
 
 if docker compose exec -T web test -f /var/www/html/bin/application.properties 2>/dev/null; then
     success "Файл application.properties существует"
@@ -150,8 +205,8 @@ EOF
 fi
 echo ""
 
-# Шаг 7: Проверка логов
-echo "Шаг 7: Проверка логов (последние 10 строк)..."
+# Шаг 8: Проверка логов
+echo "Шаг 8: Проверка логов (последние 10 строк)..."
 docker compose logs --tail=10 | grep -E "(error|Error|ERROR|warning|Warning)" || success "Критических ошибок не найдено"
 echo ""
 
@@ -162,20 +217,34 @@ echo "========================================="
 echo ""
 echo "Следующие шаги:"
 echo ""
-echo "1. Откройте веб-интерфейс:"
-echo "   http://localhost:8080"
-echo ""
-echo "2. Пройдите веб-установку:"
-echo "   - Настройка базы данных"
-echo "   - Создание администратора"
-echo "   - Завершение установки"
-echo ""
-echo "3. После установки проверьте синхронизацию:"
-echo "   docker compose exec web php yii sync-properties/check"
-echo ""
-echo "4. Проверьте страницу конфигурации:"
-echo "   http://localhost:8080/index.php?r=config"
-echo "   Найдите кнопку 'Синхронизировать application.properties'"
+if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
+    echo "✓ Зависимости Composer установлены автоматически"
+    echo ""
+    echo "1. Откройте веб-интерфейс:"
+    echo "   http://localhost:8080"
+    echo ""
+    echo "2. Пройдите веб-установку:"
+    echo "   - Настройка базы данных"
+    echo "   - Создание администратора"
+    echo "   - Завершение установки"
+    echo ""
+    echo "3. После установки проверьте синхронизацию:"
+    echo "   docker compose exec web php yii sync-properties/check"
+    echo ""
+    echo "4. Проверьте страницу конфигурации:"
+    echo "   http://localhost:8080/index.php?r=config"
+    echo "   Найдите кнопку 'Синхронизировать application.properties'"
+else
+    echo "⚠️  Зависимости Composer не установлены автоматически"
+    echo ""
+    echo "1. Установите зависимости:"
+    echo "   ./QUICK_FIX_COMPOSER.sh"
+    echo "   или:"
+    echo "   make install-composer"
+    echo ""
+    echo "2. После установки зависимостей откройте веб-интерфейс:"
+    echo "   http://localhost:8080"
+fi
 echo ""
 echo "Полезные команды:"
 echo "  make logs          - Просмотр логов"

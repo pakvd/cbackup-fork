@@ -50,13 +50,14 @@ if [ ! -d "/var/www/html/vendor" ]; then
             
             # Install dependencies - capture output and error
             echo "Installing dependencies..."
-            echo "Running: $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs"
+            echo "Running: $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
             
             # Capture both stdout and stderr
             # Use --ignore-platform-reqs to ignore missing ext-mcrypt (deprecated in PHP 7.2+)
             # Use --no-scripts to avoid running scripts that might fail
-            # Use --no-plugins to avoid plugin compatibility issues with Composer 2.8+
-            if OUTPUT=$($COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs 2>&1); then
+            # Note: Removed --no-plugins to allow asset-packagist plugin to work
+            # Use --ignore-platform-reqs to work around bower-asset packages
+            if OUTPUT=$($COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1); then
                 echo "Composer command completed with exit code 0"
                 echo "$OUTPUT" | tail -20
                 
@@ -74,37 +75,49 @@ if [ ! -d "/var/www/html/vendor" ]; then
                 echo "$OUTPUT"
                 echo "=== End of Composer error output ==="
                 
-                # Try composer update if install failed due to lock file issues
-                # Also try if vendor directory doesn't exist even if install partially succeeded
-                if echo "$OUTPUT" | grep -q "composer update" || echo "$OUTPUT" | grep -q "compatible set of packages" || [ ! -d "/var/www/html/vendor" ]; then
-                    echo "=== Trying composer update to fix lock file issues ==="
-                    echo "Running: $COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs"
+                # Always try composer update if install failed or vendor directory doesn't exist
+                # This handles cases where composer.lock is outdated or missing packages
+                if [ ! -d "/var/www/html/vendor" ] || echo "$OUTPUT" | grep -q -E "composer update|compatible set of packages|not present in the lock file|bower-asset"; then
+                    echo "=== Trying composer update to fix dependency issues ==="
+                    echo "Running: $COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
                     
-                    if UPDATE_OUTPUT=$($COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs 2>&1); then
-                        echo "Composer update completed successfully"
+                    if UPDATE_OUTPUT=$($COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1); then
+                        UPDATE_EXIT=$?
+                        echo "Composer update completed with exit code $UPDATE_EXIT"
                         echo "$UPDATE_OUTPUT" | tail -30
                         
                         # Verify installation
-                        if [ -d "/var/www/html/vendor" ]; then
+                        if [ -d "/var/www/html/vendor" ] && [ -f "/var/www/html/vendor/autoload.php" ]; then
                             echo "=== Composer dependencies installed successfully after update ==="
                             echo "Vendor directory size: $(du -sh /var/www/html/vendor 2>/dev/null | cut -f1 || echo 'unknown')"
                         else
                             echo "=== WARNING: Composer update completed but vendor directory not found ==="
+                            # Final attempt: try install again
+                            echo "=== Final attempt: composer install ==="
+                            $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20 || true
                         fi
                     else
-                        echo "=== ERROR: Composer update also failed ==="
+                        UPDATE_EXIT=$?
+                        echo "=== ERROR: Composer update failed with exit code $UPDATE_EXIT ==="
                         echo "Update output:"
                         echo "$UPDATE_OUTPUT"
                         echo "=== End of Composer update error output ==="
-                        echo "The application may not work until dependencies are installed."
+                        # Final attempt: try install without lock file
+                        if [ ! -d "/var/www/html/vendor" ]; then
+                            echo "=== Final attempt: composer install (ignoring lock file issues) ==="
+                            $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20 || true
+                        fi
+                        echo "⚠️  The application may not work until dependencies are installed."
                     fi
                 else
                     # Even if composer install failed, check if vendor was created (sometimes it partially succeeds)
                     if [ ! -d "/var/www/html/vendor" ]; then
-                        echo "=== Trying final composer install without plugins ==="
-                        $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins --ignore-platform-reqs 2>&1 | tail -20 || true
+                        echo "=== Trying final composer install ==="
+                        $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20 || true
+                        if [ ! -d "/var/www/html/vendor" ]; then
+                            echo "⚠️  Failed to install dependencies. The application may not work."
+                        fi
                     fi
-                    echo "The application may not work until dependencies are installed."
                 fi
             fi
         fi
@@ -329,6 +342,15 @@ if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
     sed -i 's/^pm.min_spare_servers =.*/pm.min_spare_servers = 5/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
     sed -i 's/^pm.max_spare_servers =.*/pm.max_spare_servers = 20/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
     sed -i 's/^request_terminate_timeout =.*/request_terminate_timeout = 120s/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
+fi
+
+# Final check: verify vendor directory exists before starting PHP-FPM
+if [ ! -d "/var/www/html/vendor" ] || [ ! -f "/var/www/html/vendor/autoload.php" ]; then
+    echo "⚠️  WARNING: vendor/autoload.php not found. Application may not work."
+    echo "   You can install dependencies manually:"
+    echo "   docker compose exec web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
+else
+    echo "✓ Vendor directory verified"
 fi
 
 # Always ensure we can start PHP-FPM

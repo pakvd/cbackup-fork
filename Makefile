@@ -17,9 +17,24 @@ set-permissions: ## Set correct file permissions (run this first)
 		./set-permissions.sh; \
 	fi
 
-up: set-permissions ## Start containers (automatically sets permissions)
+up: set-permissions ## Start containers (automatically sets permissions and installs dependencies)
 	@echo "Starting containers..."
 	@docker compose up -d
+	@echo "Waiting for containers to start..."
+	@sleep 5
+	@echo "Checking Composer dependencies..."
+	@if ! docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
+		echo "Installing Composer dependencies..."; \
+		docker compose exec -T web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -10 || \
+		docker compose exec -T web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -10; \
+		if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
+			echo "✓ Composer dependencies installed"; \
+		else \
+			echo "⚠️  Composer dependencies installation may have failed. Check logs: docker compose logs web"; \
+		fi \
+	else \
+		echo "✓ Composer dependencies already installed"; \
+	fi
 
 down: ## Stop containers
 	@docker compose down
@@ -57,4 +72,18 @@ shell-db: ## Open shell in database container
 
 install: ## Run installation wizard (opens in browser)
 	@echo "Open http://localhost:8080 in your browser"
+
+install-composer: ## Install Composer dependencies manually
+	@echo "Installing Composer dependencies..."
+	@docker compose exec web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs || \
+	docker compose exec web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs
+
+check-deps: ## Check if Composer dependencies are installed
+	@if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
+		echo "✓ Composer dependencies are installed"; \
+	else \
+		echo "✗ Composer dependencies are NOT installed"; \
+		echo "Run: make install-composer"; \
+		exit 1; \
+	fi
 

@@ -19,6 +19,12 @@
     "source": "https://github.com/cBackup/core"
   },
   "minimum-stability": "stable",
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://asset-packagist.org"
+    }
+  ],
   "require": {
     "php": ">=7.4",
     "ext-intl": "*",
