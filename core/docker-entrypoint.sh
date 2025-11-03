@@ -337,20 +337,32 @@ if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
     CURRENT_LISTEN=$(grep "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null | head -1 || echo "not found")
     echo "Current PHP-FPM listen: $CURRENT_LISTEN"
     
-    # If PHP_FPM_LISTEN is set via environment variable, use it (for flexibility)
-    if [ -n "$PHP_FPM_LISTEN" ]; then
-        echo "Using PHP_FPM_LISTEN from environment: $PHP_FPM_LISTEN"
+    # Determine listen address
+    # In Docker, PHP-FPM must listen on 0.0.0.0:9000 (not 127.0.0.1) to accept connections from other containers
+    PHP_FPM_LISTEN=${PHP_FPM_LISTEN:-0.0.0.0:9000}
+    
+    # Check if listen is set to localhost - if so, change to 0.0.0.0 for Docker network
+    if echo "$CURRENT_LISTEN" | grep -q "127.0.0.1:9000"; then
+        echo "Changing PHP-FPM listen from 127.0.0.1:9000 to $PHP_FPM_LISTEN (required for Docker network)"
+        sed -i "s|^listen = 127.0.0.1:9000|listen = $PHP_FPM_LISTEN|" /usr/local/etc/php-fpm.d/www.conf
+        echo "✓ Updated PHP-FPM listen address to $PHP_FPM_LISTEN"
+    elif [ -n "$PHP_FPM_LISTEN" ] && ! echo "$CURRENT_LISTEN" | grep -q "$PHP_FPM_LISTEN"; then
+        # If PHP_FPM_LISTEN is set and different from current, update it
+        echo "Updating PHP-FPM listen to: $PHP_FPM_LISTEN"
         if grep -q "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null; then
             sed -i "s|^listen = .*|listen = $PHP_FPM_LISTEN|" /usr/local/etc/php-fpm.d/www.conf
-            echo "Updated PHP-FPM listen address to $PHP_FPM_LISTEN"
+            echo "✓ Updated PHP-FPM listen address to $PHP_FPM_LISTEN"
         else
             sed -i "/^\[www\]/a listen = $PHP_FPM_LISTEN" /usr/local/etc/php-fpm.d/www.conf
-            echo "Added PHP-FPM listen address: $PHP_FPM_LISTEN"
+            echo "✓ Added PHP-FPM listen address: $PHP_FPM_LISTEN"
         fi
     else
-        # Default: keep as is (127.0.0.1:9000 works fine in Docker network via container name)
-        echo "PHP-FPM listen address unchanged (default: 127.0.0.1:9000, nginx connects via web:9000)"
+        echo "PHP-FPM listen address: $CURRENT_LISTEN (no change needed)"
     fi
+    
+    # Verify final configuration
+    FINAL_LISTEN=$(grep "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null | head -1 || echo "not found")
+    echo "Final PHP-FPM listen configuration: $FINAL_LISTEN"
     
     # Update pm.max_children if it's less than 40
     if grep -q "^pm.max_children =[[:space:]]*[0-3][0-9]$" /usr/local/etc/php-fpm.d/www.conf 2>/dev/null; then

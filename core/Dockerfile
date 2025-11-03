@@ -79,20 +79,24 @@ RUN echo "opcache.enable=1" > /usr/local/etc/php/conf.d/opcache.ini && \
     echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini || true
 
 # Update PHP-FPM pool configuration to increase process limit
-# Note: PHP-FPM can listen on 127.0.0.1:9000 - nginx will connect via container name (web:9000) in Docker network
+# Configure PHP-FPM to listen on 0.0.0.0:9000 (required for Docker network - nginx connects from another container)
 # Modify the default www.conf file directly to ensure settings are applied
-RUN sed -i 's/^pm.max_children =.*/pm.max_children = 40/' /usr/local/etc/php-fpm.d/www.conf && \
-    sed -i 's/^pm.start_servers =.*/pm.start_servers = 10/' /usr/local/etc/php-fpm.d/www.conf && \
-    sed -i 's/^pm.min_spare_servers =.*/pm.min_spare_servers = 5/' /usr/local/etc/php-fpm.d/www.conf && \
-    sed -i 's/^pm.max_spare_servers =.*/pm.max_spare_servers = 20/' /usr/local/etc/php-fpm.d/www.conf && \
-    sed -i 's/^request_terminate_timeout =.*/request_terminate_timeout = 120s/' /usr/local/etc/php-fpm.d/www.conf || \
-    (echo "" >> /usr/local/etc/php-fpm.d/www.conf && \
-     echo "; Custom PHP-FPM pool settings" >> /usr/local/etc/php-fpm.d/www.conf && \
-     echo "pm.max_children = 40" >> /usr/local/etc/php-fpm.d/www.conf && \
-     echo "pm.start_servers = 10" >> /usr/local/etc/php-fpm.d/www.conf && \
-     echo "pm.min_spare_servers = 5" >> /usr/local/etc/php-fpm.d/www.conf && \
-     echo "pm.max_spare_servers = 20" >> /usr/local/etc/php-fpm.d/www.conf && \
-     echo "request_terminate_timeout = 120s" >> /usr/local/etc/php-fpm.d/www.conf)
+RUN if [ -f /usr/local/etc/php-fpm.d/www.conf ]; then \
+        sed -i 's/^listen = 127.0.0.1:9000/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true; \
+        sed -i 's/^listen = \/run\/php\/php-fpm.sock/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true; \
+        sed -i 's/^pm.max_children =.*/pm.max_children = 40/' /usr/local/etc/php-fpm.d/www.conf && \
+        sed -i 's/^pm.start_servers =.*/pm.start_servers = 10/' /usr/local/etc/php-fpm.d/www.conf && \
+        sed -i 's/^pm.min_spare_servers =.*/pm.min_spare_servers = 5/' /usr/local/etc/php-fpm.d/www.conf && \
+        sed -i 's/^pm.max_spare_servers =.*/pm.max_spare_servers = 20/' /usr/local/etc/php-fpm.d/www.conf && \
+        sed -i 's/^request_terminate_timeout =.*/request_terminate_timeout = 120s/' /usr/local/etc/php-fpm.d/www.conf || \
+        (echo "" >> /usr/local/etc/php-fpm.d/www.conf && \
+         echo "; Custom PHP-FPM pool settings" >> /usr/local/etc/php-fpm.d/www.conf && \
+         echo "pm.max_children = 40" >> /usr/local/etc/php-fpm.d/www.conf && \
+         echo "pm.start_servers = 10" >> /usr/local/etc/php-fpm.d/www.conf && \
+         echo "pm.min_spare_servers = 5" >> /usr/local/etc/php-fpm.d/www.conf && \
+         echo "pm.max_spare_servers = 20" >> /usr/local/etc/php-fpm.d/www.conf && \
+         echo "request_terminate_timeout = 120s" >> /usr/local/etc/php-fpm.d/www.conf); \
+    fi
 
 # Set Docker environment variable for application detection
 ENV DOCKER_CONTAINER=true
