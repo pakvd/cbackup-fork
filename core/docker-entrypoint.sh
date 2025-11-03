@@ -48,6 +48,11 @@ if [ ! -d "/var/www/html/vendor" ]; then
                 echo "WARNING: composer.lock not found - will use composer update"
             fi
             
+            # Allow Composer plugins (required for yii2-composer)
+            echo "Configuring Composer plugins..."
+            $COMPOSER_CMD config --no-plugins allow-plugins.yiisoft/yii2-composer true 2>&1 || true
+            $COMPOSER_CMD config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
+            
             # Try install first, but detect if lock file is outdated
             echo "Installing dependencies via composer install..."
             echo "Running: $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
@@ -82,6 +87,8 @@ if [ ! -d "/var/www/html/vendor" ]; then
                 # This handles cases where composer.lock is outdated or missing packages
                 if [ "$LOCK_OUTDATED" = true ] || [ ! -d "/var/www/html/vendor" ] || [ ! -f "/var/www/html/vendor/autoload.php" ]; then
                     echo "=== Lock file is outdated or missing packages. Running composer update... ==="
+                    # Ensure plugins are allowed before update
+                    $COMPOSER_CMD config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
                     echo "Running: $COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
                     
                     UPDATE_OUTPUT=$($COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1)
@@ -95,8 +102,9 @@ if [ ! -d "/var/www/html/vendor" ]; then
                         echo "Vendor directory size: $(du -sh /var/www/html/vendor 2>/dev/null | cut -f1 || echo 'unknown')"
                     else
                         echo "=== WARNING: Composer update completed but vendor directory not found ==="
-                        # Final attempt: try install again
+                        # Final attempt: try install again (ensure plugins are allowed)
                         echo "=== Final attempt: composer install ==="
+                        $COMPOSER_CMD config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
                         $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20 || true
                         # Re-check after final attempt
                         if [ -d "/var/www/html/vendor" ] && [ -f "/var/www/html/vendor/autoload.php" ]; then
@@ -107,6 +115,7 @@ if [ ! -d "/var/www/html/vendor" ]; then
                     # Even if composer install failed, check if vendor was created (sometimes it partially succeeds)
                     if [ ! -d "/var/www/html/vendor" ]; then
                         echo "=== Trying final composer install ==="
+                        $COMPOSER_CMD config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
                         $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20 || true
                         if [ ! -d "/var/www/html/vendor" ]; then
                             echo "⚠️  Failed to install dependencies. The application may not work."

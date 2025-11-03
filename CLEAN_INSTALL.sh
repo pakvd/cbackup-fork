@@ -128,6 +128,8 @@ done
 # Если не установлены автоматически, устанавливаем вручную
 if [ "$DEPS_INSTALLED" = false ]; then
     warning "Зависимости не установлены автоматически, устанавливаем вручную..."
+    echo "Настройка Composer plugins..."
+    docker compose exec -T web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
     echo "Попытка: composer install..."
     if docker compose exec -T web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -15; then
         if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
@@ -139,6 +141,7 @@ if [ "$DEPS_INSTALLED" = false ]; then
     # Если install не сработал, пробуем update
     if [ "$DEPS_INSTALLED" = false ]; then
         echo "Попытка: composer update..."
+        docker compose exec -T web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
         if docker compose exec -T web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -15; then
             if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
                 success "Зависимости установлены через composer update"
@@ -151,7 +154,9 @@ if [ "$DEPS_INSTALLED" = false ]; then
     if [ "$DEPS_INSTALLED" = false ]; then
         error "Не удалось установить зависимости автоматически"
         warning "Проверьте логи: docker compose logs web | grep -i composer"
-        warning "Попробуйте вручную: docker compose exec web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
+        warning "Попробуйте вручную:"
+        warning "  docker compose exec web composer config allow-plugins.yiisoft/yii2-composer true"
+        warning "  docker compose exec web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
     fi
 fi
 echo ""

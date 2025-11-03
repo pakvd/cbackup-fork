@@ -28,6 +28,10 @@ fi
 echo -e "${YELLOW}⚠${NC} Зависимости не найдены, устанавливаем..."
 echo ""
 
+# Настройка разрешения плагинов
+echo "Настройка Composer plugins..."
+docker compose exec -T web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
+
 # Попытка 1: composer install
 echo "Попытка 1: composer install..."
 if docker compose exec -T web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20; then
@@ -44,6 +48,7 @@ echo ""
 
 # Попытка 2: composer update
 echo "Попытка 2: composer update..."
+docker compose exec -T web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
 if docker compose exec -T web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20; then
     if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
         echo ""
@@ -56,7 +61,8 @@ echo ""
 echo -e "${RED}✗${NC} Не удалось установить зависимости автоматически"
 echo ""
 echo "Попробуйте вручную:"
-echo "  docker compose exec web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
+echo "  docker compose exec web composer config allow-plugins.yiisoft/yii2-composer true"
+echo "  docker compose exec web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
 echo ""
 echo "Или посмотрите полные логи:"
 echo "  docker compose logs web | grep -i composer"

@@ -26,6 +26,8 @@ up: set-permissions ## Start containers (automatically sets permissions and inst
 	@sleep 3
 	@if ! docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
 		echo "Installing Composer dependencies..."; \
+		echo "Configuring Composer plugins..."; \
+		docker compose exec -T web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true; \
 		echo "Attempting composer update (lock file may be outdated)..."; \
 		if docker compose exec -T web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -15; then \
 			if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
@@ -35,6 +37,7 @@ up: set-permissions ## Start containers (automatically sets permissions and inst
 			fi \
 		else \
 			echo "⚠️  Composer update failed. Trying install..."; \
+			docker compose exec -T web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true; \
 			docker compose exec -T web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -10 || true; \
 			if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
 				echo "✓ Composer dependencies installed via install"; \
@@ -85,6 +88,7 @@ install: ## Run installation wizard (opens in browser)
 
 install-composer: ## Install Composer dependencies manually
 	@echo "Installing Composer dependencies..."
+	@docker compose exec web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
 	@docker compose exec web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs || \
 	docker compose exec web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs
 
