@@ -77,7 +77,9 @@ $config = [
             'database' => 0,
             'password' => getenv('REDIS_PASSWORD') ?: null,
             'retries' => 1,
-            'socketTimeout' => 2,
+            // Note: socketTimeout is not a valid property in yii2-redis
+            // Use timeout instead, or omit for default value
+            'timeout' => 2,
         ] : null,
         'cache' => [
             // Use Redis if extension, package and connection are available, fallback to FileCache
