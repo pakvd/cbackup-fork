@@ -380,6 +380,22 @@ fi
 echo "=== Starting PHP-FPM ==="
 echo "Command to execute: $@"
 
+# Verify PHP-FPM configuration before starting
+if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
+    LISTEN_CONFIG=$(grep "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null | head -1 || echo "")
+    echo "PHP-FPM listen configuration: $LISTEN_CONFIG"
+    
+    # Verify PHP-FPM can start (test syntax)
+    if command -v php-fpm >/dev/null 2>&1; then
+        echo "Testing PHP-FPM configuration..."
+        php-fpm -t 2>&1 | head -5 || echo "⚠️  PHP-FPM configuration test failed"
+    fi
+else
+    echo "⚠️  WARNING: PHP-FPM configuration file not found!"
+fi
+
+echo "Starting PHP-FPM process..."
 # Execute the original command (should be php-fpm)
+# Use exec to replace shell process with PHP-FPM
 exec "$@"
 
