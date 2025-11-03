@@ -406,21 +406,39 @@ fi
 echo "=== Starting PHP-FPM ==="
 echo "Command to execute: $@"
 
-# Verify PHP-FPM configuration before starting
+# Final verification before starting PHP-FPM
 if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
     LISTEN_CONFIG=$(grep "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null | head -1 || echo "")
-    echo "PHP-FPM listen configuration: $LISTEN_CONFIG"
+    echo "PHP-FPM listen configuration before start: $LISTEN_CONFIG"
+    
+    # Final check: if still 127.0.0.1, force change one more time
+    if echo "$LISTEN_CONFIG" | grep -q "127.0.0.1:9000"; then
+        echo "⚠️  CRITICAL: Still 127.0.0.1 in config! Forcing change immediately before PHP-FPM start..."
+        sed -i "s|^listen = 127.0.0.1:9000|listen = 0.0.0.0:9000|" /usr/local/etc/php-fpm.d/www.conf
+        LISTEN_CONFIG=$(grep "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null | head -1)
+        echo "✓ Final listen configuration: $LISTEN_CONFIG"
+    fi
     
     # Verify PHP-FPM can start (test syntax)
     if command -v php-fpm >/dev/null 2>&1; then
         echo "Testing PHP-FPM configuration..."
-        php-fpm -t 2>&1 | head -5 || echo "⚠️  PHP-FPM configuration test failed"
+        TEST_OUTPUT=$(php-fpm -t 2>&1)
+        TEST_EXIT=$?
+        if [ $TEST_EXIT -eq 0 ]; then
+            echo "✓ PHP-FPM configuration test passed"
+        else
+            echo "⚠️  PHP-FPM configuration test failed:"
+            echo "$TEST_OUTPUT" | head -10
+        fi
     fi
 else
     echo "⚠️  WARNING: PHP-FPM configuration file not found!"
 fi
 
 echo "Starting PHP-FPM process..."
+echo "Command: $@"
+echo ""
+
 # Execute the original command (should be php-fpm)
 # Use exec to replace shell process with PHP-FPM
 exec "$@"
