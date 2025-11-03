@@ -330,6 +330,45 @@ MYSQL_ROOT_PASSWORD=your_root_password
 
 Эти же параметры автоматически используются PHP приложением.
 
+## ⚠️ Известные проблемы и исправления
+
+### Ошибка 502 Bad Gateway
+
+Если Nginx не может подключиться к PHP-FPM, проверьте:
+
+```bash
+# Проверить PHP-FPM
+./CHECK_PHPFPM.sh
+
+# Исправить listen адрес (если PHP-FPM слушает на 127.0.0.1)
+./FIX_PHPFPM_LISTEN.sh
+
+# Детальная диагностика
+./DEBUG_PHPFPM.sh
+```
+
+📖 **Подробнее:** см. [TROUBLESHOOTING_502.md](TROUBLESHOOTING_502.md) и [QUICK_FIX_502.md](QUICK_FIX_502.md)
+
+### Ошибка "Setting unknown property: yii\redis\Connection::socketTimeout"
+
+Исправлено в конфигурации. Если появляется:
+- Очистите кеш: `docker compose exec web rm -rf /var/www/html/runtime/cache/*`
+- Перезапустите: `docker compose restart web`
+
+### Зависимости Composer не устанавливаются
+
+```bash
+# Установить вручную
+make install-composer
+
+# Или через скрипт
+./QUICK_FIX_COMPOSER.sh
+```
+
+📖 **Подробнее:** см. [INSTALL_COMPOSER_DEPS.md](INSTALL_COMPOSER_DEPS.md)
+
+📋 **Все исправления:** см. [CHANGELOG_FIXES.md](CHANGELOG_FIXES.md)
+
 ## 🔄 Синхронизация application.properties
 
 Файл `application.properties` синхронизируется автоматически при установке и изменении настроек в веб-интерфейсе. При необходимости можно выполнить ручную синхронизацию:
@@ -545,9 +584,23 @@ docker system prune -a
 
 ## 📚 Дополнительная документация
 
-- **🚀 Production Deployment**: [PRODUCTION.md](PRODUCTION.md) - Полная инструкция для продакшн
-- **Быстрый старт**: [QUICKSTART.md](QUICKSTART.md)
-- **История изменений**: [CHANGELOG.md](CHANGELOG.md)
+### Основные руководства
+- **🚀 Быстрый старт**: [QUICKSTART.md](QUICKSTART.md)
+- **📖 Полная установка**: [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
+- **⚙️ Автоматическая установка**: [AUTO_INSTALL.md](AUTO_INSTALL.md)
+- **🚀 Production Deployment**: [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)
+
+### Решение проблем
+- **🔧 Устранение ошибки 502**: [TROUBLESHOOTING_502.md](TROUBLESHOOTING_502.md)
+- **⚡ Быстрое исправление 502**: [QUICK_FIX_502.md](QUICK_FIX_502.md)
+- **📦 Зависимости Composer**: [INSTALL_COMPOSER_DEPS.md](INSTALL_COMPOSER_DEPS.md)
+- **🔐 Права доступа**: [FIX_PERMISSIONS.md](FIX_PERMISSIONS.md)
+
+### Исправления и изменения
+- **📋 Журнал исправлений**: [CHANGELOG_FIXES.md](CHANGELOG_FIXES.md)
+- **📝 История изменений**: [CHANGELOG.md](CHANGELOG.md)
+
+### Дополнительно
 - **Оригинальная документация**: https://github.com/cBackup/main
 - **Официальный сайт**: http://cbackup.me
 

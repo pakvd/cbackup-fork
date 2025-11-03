@@ -55,12 +55,27 @@ docker compose exec web test -f /var/www/html/vendor/autoload.php && echo "OK" |
 make install-composer
 ```
 
-### 6. Полный перезапуск
+### 6. PHP-FPM слушает на 127.0.0.1 вместо 0.0.0.0
+
+**Проблема:** PHP-FPM слушает на `127.0.0.1:9000`, что блокирует подключения из nginx контейнера.
+
+**Решение:**
+```bash
+# Использовать скрипт для исправления
+./FIX_PHPFPM_LISTEN.sh
+
+# Или вручную:
+docker compose exec web sed -i "s|^listen = 127.0.0.1:9000|listen = 0.0.0.0:9000|" /usr/local/etc/php-fpm.d/www.conf
+docker compose restart web
+```
+
+### 7. Полный перезапуск
 
 Если ничего не помогает:
 
 ```bash
 docker compose down
+docker compose build --no-cache web  # Пересобрать образ (исправления в entrypoint)
 docker compose up -d
 
 # Подождать 10-15 секунд для запуска всех контейнеров
