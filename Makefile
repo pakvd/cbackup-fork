@@ -23,14 +23,24 @@ up: set-permissions ## Start containers (automatically sets permissions and inst
 	@echo "Waiting for containers to start..."
 	@sleep 5
 	@echo "Checking Composer dependencies..."
+	@sleep 3
 	@if ! docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
 		echo "Installing Composer dependencies..."; \
-		docker compose exec -T web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -10 || \
-		docker compose exec -T web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -10; \
-		if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
-			echo "✓ Composer dependencies installed"; \
+		echo "Attempting composer update (lock file may be outdated)..."; \
+		if docker compose exec -T web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -15; then \
+			if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
+				echo "✓ Composer dependencies installed via update"; \
+			else \
+				echo "⚠️  Composer update completed but vendor/autoload.php not found. Check logs: docker compose logs web"; \
+			fi \
 		else \
-			echo "⚠️  Composer dependencies installation may have failed. Check logs: docker compose logs web"; \
+			echo "⚠️  Composer update failed. Trying install..."; \
+			docker compose exec -T web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -10 || true; \
+			if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then \
+				echo "✓ Composer dependencies installed via install"; \
+			else \
+				echo "⚠️  Composer dependencies installation may have failed. Check logs: docker compose logs web"; \
+			fi \
 		fi \
 	else \
 		echo "✓ Composer dependencies already installed"; \

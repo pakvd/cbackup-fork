@@ -43,71 +43,65 @@ if [ ! -d "/var/www/html/vendor" ]; then
             
             # Check if composer.lock exists
             if [ -f "/var/www/html/composer.lock" ]; then
-                echo "composer.lock found - using locked versions"
+                echo "composer.lock found - will try install first, fallback to update if needed"
             else
-                echo "WARNING: composer.lock not found - will resolve dependencies"
+                echo "WARNING: composer.lock not found - will use composer update"
             fi
             
-            # Install dependencies - capture output and error
-            echo "Installing dependencies..."
+            # Try install first, but detect if lock file is outdated
+            echo "Installing dependencies via composer install..."
             echo "Running: $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
+            OUTPUT=$($COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1)
+            INSTALL_EXIT=$?
             
-            # Capture both stdout and stderr
-            # Use --ignore-platform-reqs to ignore missing ext-mcrypt (deprecated in PHP 7.2+)
-            # Use --no-scripts to avoid running scripts that might fail
-            # Note: Removed --no-plugins to allow asset-packagist plugin to work
-            # Use --ignore-platform-reqs to work around bower-asset packages
-            if OUTPUT=$($COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1); then
-                echo "Composer command completed with exit code 0"
+            # Check if install succeeded AND vendor directory exists
+            # Also check if output indicates lock file is outdated
+            LOCK_OUTDATED=false
+            if echo "$OUTPUT" | grep -q -E "not up to date|The lock file is not up to date|not present in the lock file|composer update"; then
+                LOCK_OUTDATED=true
+                echo "Detected: composer.lock is outdated based on install output"
+            fi
+            
+            if [ $INSTALL_EXIT -eq 0 ] && [ -d "/var/www/html/vendor" ] && [ -f "/var/www/html/vendor/autoload.php" ] && [ "$LOCK_OUTDATED" = false ]; then
+                echo "Composer install completed successfully"
                 echo "$OUTPUT" | tail -20
-                
-                # Verify installation
-                if [ -d "/var/www/html/vendor" ]; then
-                    echo "=== Composer dependencies installed successfully ==="
-                    echo "Vendor directory size: $(du -sh /var/www/html/vendor 2>/dev/null | cut -f1 || echo 'unknown')"
-                else
-                    echo "=== WARNING: Composer completed but vendor directory not found ==="
-                fi
+                echo "=== Composer dependencies installed successfully ==="
+                echo "Vendor directory size: $(du -sh /var/www/html/vendor 2>/dev/null | cut -f1 || echo 'unknown')"
             else
-                EXIT_CODE=$?
-                echo "=== ERROR: Composer install failed with exit code $EXIT_CODE ==="
-                echo "Composer output:"
-                echo "$OUTPUT"
-                echo "=== End of Composer error output ==="
+                # Install failed or lock file is outdated - need to use update
+                echo "=== Composer install completed with exit code $INSTALL_EXIT ==="
+                if [ "$LOCK_OUTDATED" = true ]; then
+                    echo "Lock file is outdated, will use composer update"
+                elif [ ! -d "/var/www/html/vendor" ] || [ ! -f "/var/www/html/vendor/autoload.php" ]; then
+                    echo "Vendor directory not found, will try composer update"
+                fi
+                echo "Composer install output:"
+                echo "$OUTPUT" | tail -30
                 
-                # Always try composer update if install failed or vendor directory doesn't exist
+                # Always try composer update if install failed or lock file is outdated
                 # This handles cases where composer.lock is outdated or missing packages
-                if [ ! -d "/var/www/html/vendor" ] || echo "$OUTPUT" | grep -q -E "composer update|compatible set of packages|not present in the lock file|bower-asset"; then
-                    echo "=== Trying composer update to fix dependency issues ==="
+                if [ "$LOCK_OUTDATED" = true ] || [ ! -d "/var/www/html/vendor" ] || [ ! -f "/var/www/html/vendor/autoload.php" ]; then
+                    echo "=== Lock file is outdated or missing packages. Running composer update... ==="
                     echo "Running: $COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs"
                     
-                    if UPDATE_OUTPUT=$($COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1); then
-                        UPDATE_EXIT=$?
-                        echo "Composer update completed with exit code $UPDATE_EXIT"
-                        echo "$UPDATE_OUTPUT" | tail -30
-                        
-                        # Verify installation
-                        if [ -d "/var/www/html/vendor" ] && [ -f "/var/www/html/vendor/autoload.php" ]; then
-                            echo "=== Composer dependencies installed successfully after update ==="
-                            echo "Vendor directory size: $(du -sh /var/www/html/vendor 2>/dev/null | cut -f1 || echo 'unknown')"
-                        else
-                            echo "=== WARNING: Composer update completed but vendor directory not found ==="
-                            # Final attempt: try install again
-                            echo "=== Final attempt: composer install ==="
-                            $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20 || true
-                        fi
+                    UPDATE_OUTPUT=$($COMPOSER_CMD update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1)
+                    UPDATE_EXIT=$?
+                    echo "Composer update completed with exit code $UPDATE_EXIT"
+                    echo "$UPDATE_OUTPUT" | tail -40
+                    
+                    # Verify installation
+                    if [ -d "/var/www/html/vendor" ] && [ -f "/var/www/html/vendor/autoload.php" ]; then
+                        echo "=== Composer dependencies installed successfully after update ==="
+                        echo "Vendor directory size: $(du -sh /var/www/html/vendor 2>/dev/null | cut -f1 || echo 'unknown')"
                     else
-                        UPDATE_EXIT=$?
-                        echo "=== ERROR: Composer update failed with exit code $UPDATE_EXIT ==="
-                        echo "Update output:"
-                        echo "$UPDATE_OUTPUT"
-                        echo "=== End of Composer update error output ==="
-                        # Final attempt: try install without lock file
-                        if [ ! -d "/var/www/html/vendor" ]; then
-                            echo "=== Final attempt: composer install (ignoring lock file issues) ==="
-                            $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20 || true
+                        echo "=== WARNING: Composer update completed but vendor directory not found ==="
+                        # Final attempt: try install again
+                        echo "=== Final attempt: composer install ==="
+                        $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -20 || true
+                        # Re-check after final attempt
+                        if [ -d "/var/www/html/vendor" ] && [ -f "/var/www/html/vendor/autoload.php" ]; then
+                            echo "=== Composer dependencies installed successfully after final install attempt ==="
                         fi
-                        echo "⚠️  The application may not work until dependencies are installed."
                     fi
                 else
                     # Even if composer install failed, check if vendor was created (sometimes it partially succeeds)
