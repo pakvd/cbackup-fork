@@ -332,6 +332,26 @@ fi
 # This ensures settings are applied even without rebuilding the image
 if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
     echo "=== Updating PHP-FPM pool configuration ==="
+    
+    # Check current listen configuration
+    CURRENT_LISTEN=$(grep "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null | head -1 || echo "not found")
+    echo "Current PHP-FPM listen: $CURRENT_LISTEN"
+    
+    # If PHP_FPM_LISTEN is set via environment variable, use it (for flexibility)
+    if [ -n "$PHP_FPM_LISTEN" ]; then
+        echo "Using PHP_FPM_LISTEN from environment: $PHP_FPM_LISTEN"
+        if grep -q "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null; then
+            sed -i "s|^listen = .*|listen = $PHP_FPM_LISTEN|" /usr/local/etc/php-fpm.d/www.conf
+            echo "Updated PHP-FPM listen address to $PHP_FPM_LISTEN"
+        else
+            sed -i "/^\[www\]/a listen = $PHP_FPM_LISTEN" /usr/local/etc/php-fpm.d/www.conf
+            echo "Added PHP-FPM listen address: $PHP_FPM_LISTEN"
+        fi
+    else
+        # Default: keep as is (127.0.0.1:9000 works fine in Docker network via container name)
+        echo "PHP-FPM listen address unchanged (default: 127.0.0.1:9000, nginx connects via web:9000)"
+    fi
+    
     # Update pm.max_children if it's less than 40
     if grep -q "^pm.max_children =[[:space:]]*[0-3][0-9]$" /usr/local/etc/php-fpm.d/www.conf 2>/dev/null; then
         CURRENT_MAX=$(grep "^pm.max_children" /usr/local/etc/php-fpm.d/www.conf | head -1 | sed 's/.*= *\([0-9]*\).*/\1/')

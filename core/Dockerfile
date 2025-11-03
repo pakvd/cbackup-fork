@@ -79,6 +79,7 @@ RUN echo "opcache.enable=1" > /usr/local/etc/php/conf.d/opcache.ini && \
     echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini || true
 
 # Update PHP-FPM pool configuration to increase process limit
+# Note: PHP-FPM can listen on 127.0.0.1:9000 - nginx will connect via container name (web:9000) in Docker network
 # Modify the default www.conf file directly to ensure settings are applied
 RUN sed -i 's/^pm.max_children =.*/pm.max_children = 40/' /usr/local/etc/php-fpm.d/www.conf && \
     sed -i 's/^pm.start_servers =.*/pm.start_servers = 10/' /usr/local/etc/php-fpm.d/www.conf && \
