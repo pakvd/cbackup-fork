@@ -328,7 +328,7 @@ else
     # Opcache is already configured in Dockerfile
 fi
 
-# Update PHP-FPM pool configuration if not already set
+# Update PHP-FPM pool configuration BEFORE starting PHP-FPM
 # This ensures settings are applied even without rebuilding the image
 if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
     echo "=== Updating PHP-FPM pool configuration ==="
@@ -341,14 +341,20 @@ if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
     # In Docker, PHP-FPM must listen on 0.0.0.0:9000 (not 127.0.0.1) to accept connections from other containers
     PHP_FPM_LISTEN=${PHP_FPM_LISTEN:-0.0.0.0:9000}
     
-    # Check if listen is set to localhost - if so, change to 0.0.0.0 for Docker network
+    # ALWAYS update listen address to 0.0.0.0:9000 for Docker network compatibility
+    # This is critical - 127.0.0.1:9000 only accepts connections from within the same container
     if echo "$CURRENT_LISTEN" | grep -q "127.0.0.1:9000"; then
-        echo "Changing PHP-FPM listen from 127.0.0.1:9000 to $PHP_FPM_LISTEN (required for Docker network)"
+        echo "⚠️  Changing PHP-FPM listen from 127.0.0.1:9000 to $PHP_FPM_LISTEN (required for Docker network)"
         sed -i "s|^listen = 127.0.0.1:9000|listen = $PHP_FPM_LISTEN|" /usr/local/etc/php-fpm.d/www.conf
         echo "✓ Updated PHP-FPM listen address to $PHP_FPM_LISTEN"
-    elif [ -n "$PHP_FPM_LISTEN" ] && ! echo "$CURRENT_LISTEN" | grep -q "$PHP_FPM_LISTEN"; then
-        # If PHP_FPM_LISTEN is set and different from current, update it
-        echo "Updating PHP-FPM listen to: $PHP_FPM_LISTEN"
+    elif echo "$CURRENT_LISTEN" | grep -qE "(listen = /run|listen = /var)"; then
+        # If using socket, change to TCP
+        echo "⚠️  Changing PHP-FPM from socket to TCP: $PHP_FPM_LISTEN"
+        sed -i "s|^listen = .*|listen = $PHP_FPM_LISTEN|" /usr/local/etc/php-fpm.d/www.conf
+        echo "✓ Updated PHP-FPM listen address to $PHP_FPM_LISTEN"
+    elif ! echo "$CURRENT_LISTEN" | grep -q "0.0.0.0:9000"; then
+        # If not already 0.0.0.0:9000, update it
+        echo "⚠️  Updating PHP-FPM listen to: $PHP_FPM_LISTEN"
         if grep -q "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null; then
             sed -i "s|^listen = .*|listen = $PHP_FPM_LISTEN|" /usr/local/etc/php-fpm.d/www.conf
             echo "✓ Updated PHP-FPM listen address to $PHP_FPM_LISTEN"
@@ -357,12 +363,20 @@ if [ -f "/usr/local/etc/php-fpm.d/www.conf" ]; then
             echo "✓ Added PHP-FPM listen address: $PHP_FPM_LISTEN"
         fi
     else
-        echo "PHP-FPM listen address: $CURRENT_LISTEN (no change needed)"
+        echo "✓ PHP-FPM listen address already correct: $CURRENT_LISTEN"
     fi
     
     # Verify final configuration
     FINAL_LISTEN=$(grep "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null | head -1 || echo "not found")
     echo "Final PHP-FPM listen configuration: $FINAL_LISTEN"
+    
+    # Double-check: if still 127.0.0.1, force change
+    if echo "$FINAL_LISTEN" | grep -q "127.0.0.1:9000"; then
+        echo "⚠️  WARNING: Still listening on 127.0.0.1, forcing change to 0.0.0.0:9000"
+        sed -i "s|^listen = 127.0.0.1:9000|listen = 0.0.0.0:9000|" /usr/local/etc/php-fpm.d/www.conf
+        FINAL_LISTEN=$(grep "^listen = " /usr/local/etc/php-fpm.d/www.conf 2>/dev/null | head -1)
+        echo "✓ Force-updated to: $FINAL_LISTEN"
+    fi
     
     # Update pm.max_children if it's less than 40
     if grep -q "^pm.max_children =[[:space:]]*[0-3][0-9]$" /usr/local/etc/php-fpm.d/www.conf 2>/dev/null; then
