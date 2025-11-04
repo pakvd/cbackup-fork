@@ -1,7 +1,8 @@
 #!/bin/bash
 # Скрипт для чистой установки cBackup с проверкой всех функций
 
-set -e  # Прервать выполнение при ошибке
+# Не используем set -e, так как некоторые команды могут завершаться с ошибкой, но это нормально
+# (например, composer может вернуть ошибку, но мы обрабатываем это вручную)
 
 echo "========================================="
 echo "   Чистая установка cBackup"
@@ -130,23 +131,29 @@ if [ "$DEPS_INSTALLED" = false ]; then
     warning "Зависимости не установлены автоматически, устанавливаем вручную..."
     echo "Настройка Composer plugins..."
     docker compose exec -T web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
-    echo "Попытка: composer install..."
-    if docker compose exec -T web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -15; then
+    
+    # Сначала пробуем update (как в Makefile) - для устаревших composer.lock
+    echo "Попытка: composer update..."
+    UPDATE_OUTPUT=$(docker compose exec -T web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -15 || true)
+    echo "$UPDATE_OUTPUT"
+    
+    if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
+        success "Зависимости установлены через composer update"
+        DEPS_INSTALLED=true
+    else
+        warning "Composer update не помог, пробуем install..."
+        
+        # Если update не сработал, пробуем install
+        echo "Попытка: composer install..."
+        docker compose exec -T web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
+        INSTALL_OUTPUT=$(docker compose exec -T web composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -10 || true)
+        echo "$INSTALL_OUTPUT"
+        
         if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
             success "Зависимости установлены через composer install"
             DEPS_INSTALLED=true
-        fi
-    fi
-    
-    # Если install не сработал, пробуем update
-    if [ "$DEPS_INSTALLED" = false ]; then
-        echo "Попытка: composer update..."
-        docker compose exec -T web composer config allow-plugins.yiisoft/yii2-composer true 2>&1 || true
-        if docker compose exec -T web composer update --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs 2>&1 | tail -15; then
-            if docker compose exec -T web test -f /var/www/html/vendor/autoload.php 2>/dev/null; then
-                success "Зависимости установлены через composer update"
-                DEPS_INSTALLED=true
-            fi
+        else
+            warning "Composer install выполнен, но vendor/autoload.php не найден"
         fi
     fi
     
