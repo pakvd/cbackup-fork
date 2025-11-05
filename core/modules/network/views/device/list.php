@@ -180,52 +180,53 @@ $this->params['breadcrumbs'][] = $this->title;
 
 <?php
 $this->registerJs(/** @lang JavaScript */
-    "
+    '
         /** Load modal content via AJAX */
-        $(document).on('click', 'a[data-target=\"#form_modal\"]', function (e) {
-            var modal = $('#form_modal');
-            var url = $(this).attr('href');
+        $(document).on("click", "a[data-target=\"#form_modal\"]", function (e) {
+            var modal = $("#form_modal");
+            var url = $(this).attr("href");
             
             // Clear previous content
-            modal.find('#form_modal_content').empty();
+            modal.find("#form_modal_content").empty();
             
             // Load content via AJAX (renderAjax includes scripts)
             $.ajax({
                 url: url,
-                type: 'GET',
-                dataType: 'html',
+                type: "GET",
+                dataType: "html",
                 success: function(data) {
                     // Insert HTML content (renderAjax includes scripts in the response)
-                    modal.find('#form_modal_content').html(data);
-                    modal.modal('show');
+                    modal.find("#form_modal_content").html(data);
+                    modal.modal("show");
                     
                     // Init select2 after modal is shown and scripts are executed
                     // renderAjax automatically executes script tags, so select2 should be available
                     setTimeout(function() {
-                        if (typeof $.fn.select2 !== 'undefined') {
-                            $('#form_modal .select2').select2({
-                                width: '100%'
+                        if (typeof $.fn.select2 !== "undefined") {
+                            $("#form_modal .select2").select2({
+                                width: "100%"
                             });
                         } else {
                             // Select2 should be loaded on main page, retry
-                            console.warn('select2 not available, retrying...');
+                            console.warn("select2 not available, retrying...");
                             setTimeout(function() {
-                                if (typeof $.fn.select2 !== 'undefined') {
-                                    $('#form_modal .select2').select2({
-                                        width: '100%'
+                                if (typeof $.fn.select2 !== "undefined") {
+                                    $("#form_modal .select2").select2({
+                                        width: "100%"
                                     });
                                 } else {
-                                    console.error('select2 library not found. Make sure Select2Asset is registered.');
+                                    console.error("select2 library not found. Make sure Select2Asset is registered.");
                                 }
                             }, 500);
                         }
                     }, 300);
                 },
                 error: function(xhr, status, error) {
-                    modal.find('#form_modal_content').html(
-                        '<div class="alert alert-danger">Error loading form: ' + error + '</div>'
+                    var errorMsg = "Error loading form: " + error;
+                    modal.find("#form_modal_content").html(
+                        "<div class=\"alert alert-danger\">" + errorMsg + "</div>"
                     );
-                    modal.modal('show');
+                    modal.modal("show");
                 }
             });
             
@@ -233,41 +234,41 @@ $this->registerJs(/** @lang JavaScript */
         });
         
         /** Device form AJAX submit handler */
-        $(document).on('submit', '#device_form', function () {
-            modalFormHandler($(this), 'form_modal', 'save');
+        $(document).on("submit", "#device_form", function () {
+            modalFormHandler($(this), "form_modal", "save");
             return false;
         });
         
         /** Modal shown event handler - init select2 when modal is fully shown */
-        $(document).on('shown.bs.modal', '#form_modal', function () {
+        $(document).on("shown.bs.modal", "#form_modal", function () {
             // Check if select2 is available and init
-            if (typeof $.fn.select2 !== 'undefined') {
-                $('#form_modal .select2').select2({
-                    width: '100%'
+            if (typeof $.fn.select2 !== "undefined") {
+                $("#form_modal .select2").select2({
+                    width: "100%"
                 });
             }
         });
         
         /** Modal hidden event handler */
-        $(document).on('hidden.bs.modal', '#form_modal', function () {
-            var toast = $('#toast-container');
+        $(document).on("hidden.bs.modal", "#form_modal", function () {
+            var toast = $("#toast-container");
             
             /** Reload grid after record was added */
-            if (toast.find('.toast-success, .toast-warning').is(':visible')) {
-                $.pjax.reload({container: '#device-pjax', timeout: 10000});
+            if (toast.find(".toast-success, .toast-warning").is(":visible")) {
+                $.pjax.reload({container: "#device-pjax", timeout: 10000});
                 location.reload(); // Reload page to update vendors list
             }
             
             /** Remove errors after modal close */
-            toast.find('.toast-error').fadeOut(1000, function() { $(this).remove(); });
+            toast.find(".toast-error").fadeOut(1000, function() { $(this).remove(); });
         });
         
         /** Init select2 on page load - only if select2 is available */
-        if (typeof $.fn.select2 !== 'undefined') {
-            $('.select2').select2({
-                width: '100%'
+        if (typeof $.fn.select2 !== "undefined") {
+            $(".select2").select2({
+                width: "100%"
             });
         }
-    "
+    '
 );
 ?>
