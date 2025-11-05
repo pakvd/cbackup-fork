@@ -99,17 +99,20 @@ public class SshShellServer {
                 Files.createDirectories(hostKeyPath.getParent());
             }
             
-            // If old key exists and is incompatible, delete it to force regeneration
-            // Modern SSH clients require RSA keys of at least 2048 bits or newer algorithms
-            if (Files.exists(hostKeyPath)) {
-                try {
-                    // Check if we should regenerate (for compatibility with modern clients)
-                    // Delete old key to force generation of new compatible key
+            // Delete all old keys (including ECDSA) to force RSA regeneration
+            // phpseclib 2.0.9 only supports ssh-rsa, so we must use RSA keys
+            try {
+                if (Files.exists(hostKeyPath)) {
                     Files.delete(hostKeyPath);
                     System.out.println("Deleted old SSH host key for regeneration");
-                } catch (IOException e) {
-                    System.err.println("Warning: Could not delete old host key: " + e.getMessage());
                 }
+                // Also delete any .pub files
+                Path hostKeyPubPath = Paths.get(hostKeyPath.toString() + ".pub");
+                if (Files.exists(hostKeyPubPath)) {
+                    Files.delete(hostKeyPubPath);
+                }
+            } catch (IOException e) {
+                System.err.println("Warning: Could not delete old host key: " + e.getMessage());
             }
             
             System.out.println("SSH Host key path: " + hostKeyPath);
@@ -122,6 +125,18 @@ public class SshShellServer {
                     // Force RSA key generation for compatibility with phpseclib
                     // Always use RSA regardless of requested key type
                     return super.loadKey(session, KeyUtils.RSA_ALGORITHM);
+                }
+                
+                @Override
+                public java.util.List<KeyPair> loadKeys(SessionContext session) {
+                    // Force only RSA keys to be loaded/generated
+                    try {
+                        KeyPair rsaKey = loadKey(session, KeyUtils.RSA_ALGORITHM);
+                        return java.util.Collections.singletonList(rsaKey);
+                    } catch (IOException | GeneralSecurityException e) {
+                        System.err.println("Error loading RSA key: " + e.getMessage());
+                        return java.util.Collections.emptyList();
+                    }
                 }
             };
             
