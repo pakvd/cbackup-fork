@@ -150,7 +150,13 @@ class NetSsh
         
         /** Execute command */
         error_log("NetSsh::schedulerExec() writing command: " . $command);
-        $this->ssh->write("{$command}\n");
+        error_log("NetSsh::schedulerExec() command length: " . strlen($command) . " bytes");
+        
+        // Ensure command is sent with newline
+        $commandToSend = trim($command) . "\n";
+        error_log("NetSsh::schedulerExec() sending: [" . $commandToSend . "] (length: " . strlen($commandToSend) . ")");
+        
+        $this->ssh->write($commandToSend);
         $this->ssh->setTimeout(30);
         error_log("NetSsh::schedulerExec() command written, starting to read output");
 

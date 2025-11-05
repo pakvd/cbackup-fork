@@ -76,9 +76,14 @@ public class CbackupShellHandler implements Command {
             BufferedReader reader = null;
             try {
                 // Initialize streams
-                reader = new BufferedReader(new InputStreamReader(in));
-                writer = new PrintWriter(new OutputStreamWriter(out), true);
-                errorWriter = new PrintWriter(new OutputStreamWriter(err), true);
+                // Use InputStreamReader with explicit charset to ensure proper character reading
+                reader = new BufferedReader(new InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+                writer = new PrintWriter(new OutputStreamWriter(out, java.nio.charset.StandardCharsets.UTF_8), true);
+                errorWriter = new PrintWriter(new OutputStreamWriter(err, java.nio.charset.StandardCharsets.UTF_8), true);
+                
+                System.out.println("Streams initialized - reader ready, writer ready, errorWriter ready");
+                System.err.println("Streams initialized (stderr)");
+                System.err.flush();
                 
                 System.out.println("Streams initialized, sending welcome message");
                 
@@ -89,10 +94,38 @@ public class CbackupShellHandler implements Command {
                 writer.flush();
                 
                 System.out.println("Welcome message sent");
+                System.err.println("Welcome message sent (stderr)");
 
                 String line;
-                while ((line = reader.readLine()) != null) {
-                    System.out.println("Raw input line received: [" + line + "] (length: " + line.length() + ")");
+                System.out.println("Waiting for input...");
+                System.err.println("Waiting for input... (stderr)");
+                System.err.flush();
+                
+                while (true) {
+                    try {
+                        System.out.println("About to read line from reader...");
+                        System.err.println("About to read line from reader... (stderr)");
+                        System.err.flush();
+                        System.out.flush();
+                        
+                        // Force flush to ensure logs are visible
+                        java.io.PrintStream ps = System.out;
+                        ps.flush();
+                        
+                        line = reader.readLine();
+                        
+                        if (line == null) {
+                            System.out.println("readLine() returned null - connection closed");
+                            System.err.println("readLine() returned null (stderr)");
+                            System.err.flush();
+                            System.out.flush();
+                            break;
+                        }
+                        
+                        System.out.println("Raw input line received: [" + line + "] (length: " + line.length() + ")");
+                        System.err.println("Raw input line received: [" + line + "] (length: " + line.length() + ") (stderr)");
+                        System.err.flush();
+                        System.out.flush();
                     
                     if (line.trim().isEmpty()) {
                         writer.print("cbackup> ");
@@ -102,12 +135,16 @@ public class CbackupShellHandler implements Command {
 
                     String[] parts = line.trim().split("\\s+");
                     System.out.println("Parts count: " + parts.length + ", parts: " + java.util.Arrays.toString(parts));
+                    System.err.println("Parts count: " + parts.length + ", parts: " + java.util.Arrays.toString(parts) + " (stderr)");
                     
                     String command = parts[0].toLowerCase();
                     String args;
                     
+                    System.out.println("First part (command): [" + command + "], checking if equals 'cbackup'");
+                    System.err.println("First part (command): [" + command + "], checking if equals 'cbackup' (stderr)");
+                    
                     // Handle "cbackup" prefix - if command is "cbackup", use next part as command
-                    if (command.equals("cbackup") && parts.length > 1) {
+                    if ("cbackup".equals(command) && parts.length > 1) {
                         command = parts[1].toLowerCase();
                         // Build args from remaining parts
                         StringBuilder argsBuilder = new StringBuilder();
@@ -117,26 +154,41 @@ public class CbackupShellHandler implements Command {
                         }
                         args = argsBuilder.toString();
                         System.out.println("Received command with cbackup prefix: " + command + " with args: [" + args + "]");
+                        System.err.println("Received command with cbackup prefix: " + command + " with args: [" + args + "] (stderr)");
                     } else {
                         args = parts.length > 1 ? line.substring(parts[0].length()).trim() : "";
-                        System.out.println("Received command: " + command + " with args: [" + args + "]");
+                        System.out.println("Received command (no prefix): " + command + " with args: [" + args + "]");
+                        System.err.println("Received command (no prefix): " + command + " with args: [" + args + "] (stderr)");
                     }
+                    
+                    System.out.println("Calling processCommand with command=[" + command + "], args=[" + args + "]");
+                    System.err.println("Calling processCommand with command=[" + command + "], args=[" + args + "] (stderr)");
                     
                     String result = processCommand(command, args, errorWriter);
                     if (result != null && !result.isEmpty()) {
                         System.out.println("Command result length: " + result.length());
+                        System.err.println("Command result length: " + result.length() + " (stderr)");
                         writer.println(result);
                         writer.flush();
                     } else {
                         System.out.println("Command returned null or empty result");
+                        System.err.println("Command returned null or empty result (stderr)");
                     }
                     writer.print("cbackup> ");
                     writer.flush();
+                    System.out.println("Prompt sent after command");
+                    System.err.println("Prompt sent after command (stderr)");
+                    System.err.flush();
+                    } catch (IOException e) {
+                        System.out.println("IOException while reading line: " + e.getMessage());
+                        System.err.println("IOException while reading line: " + e.getMessage() + " (stderr)");
+                        System.err.flush();
+                        break;
+                    }
                 }
-            } catch (IOException e) {
-                // Connection closed - this is normal when client disconnects
-                System.out.println("SSH connection closed: " + e.getMessage());
             } catch (Exception e) {
+                // Connection closed or other error - this is normal when client disconnects
+                System.out.println("SSH connection closed or error: " + e.getMessage());
                 System.err.println("Error in SSH handler: " + e.getMessage());
                 e.printStackTrace();
             } finally {
@@ -160,6 +212,9 @@ public class CbackupShellHandler implements Command {
     }
 
     private String processCommand(String command, String args, PrintWriter errorWriter) {
+        System.out.println("processCommand() called with command=[" + command + "], args=[" + args + "]");
+        System.err.println("processCommand() called with command=[" + command + "], args=[" + args + "] (stderr)");
+        
         boolean returnJson = args.contains("-json");
         if (returnJson) {
             args = args.replace("-json", "").trim();
@@ -167,6 +222,7 @@ public class CbackupShellHandler implements Command {
 
         try {
             String result;
+            System.out.println("Processing command switch for: " + command);
             switch (command) {
                 case "start":
                     result = scheduler.shellCommandStart(returnJson ? "-json" : "");
@@ -193,7 +249,10 @@ public class CbackupShellHandler implements Command {
                     result = getHelpText();
                     break;
                 default:
+                    System.out.println("Unknown command: " + command + ". Available commands: start, restart, stop, backup, runtask, status, version, help");
+                    System.err.println("Unknown command: " + command + " (stderr)");
                     errorWriter.println("Unknown command: " + command + ". Type 'help' for available commands.");
+                    errorWriter.flush();
                     return null;
             }
             return result;
