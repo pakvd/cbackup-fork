@@ -355,10 +355,33 @@ public class GeneralSsh extends AbstractProtocol {
 
             Hashtable<String,String> config = new Hashtable<>();
             config.put("StrictHostKeyChecking", "no");
-            config.put("kex", "diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group-exchange-sha256,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521");
+            // Configure key exchange algorithms - prioritize older algorithms that legacy devices support
+            // Order matters: list most compatible algorithms first
+            config.put("kex", "diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1,diffie-hellman-group-exchange-sha256,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521");
+            // Also configure server host key algorithms for compatibility
+            config.put("server_host_key", "ssh-rsa,ssh-dss,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521");
+            // Configure ciphers for compatibility
+            config.put("cipher.s2c", "aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc,blowfish-cbc,aes192-cbc,aes256-cbc");
+            config.put("cipher.c2s", "aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc,blowfish-cbc,aes192-cbc,aes256-cbc");
+            // Configure MAC algorithms
+            config.put("mac.s2c", "hmac-md5,hmac-sha1,hmac-sha2-256,hmac-sha2-512,hmac-ripemd160");
+            config.put("mac.c2s", "hmac-md5,hmac-sha1,hmac-sha2-256,hmac-sha2-512,hmac-ripemd160");
 
             this.session.setConfig(config);
-            this.session.connect(150000);
+            
+            // Log connection attempt for debugging
+            String connectionInfo = "Task " + this.coordinates.get("taskName") + ", node " + this.coordinates.get("nodeId") + 
+                                   ": Attempting SSH connection to " + nodeIp + ":" + this.sshPort;
+            this.logMessage("INFO", "NODE REQUEST", connectionInfo);
+            
+            try {
+                this.session.connect(150000);
+                this.logMessage("INFO", "NODE REQUEST", "SSH connection established successfully");
+            } catch (Exception connectException) {
+                String errorMsg = "SSH connection failed: " + connectException.getMessage();
+                this.logException("ERROR", "NODE REQUEST", errorMsg, connectException);
+                throw connectException;
+            }
 
             this.channel = (ChannelShell) this.session.openChannel("shell");
             this.expect  = new Expect4j(this.channel.getInputStream(), this.channel.getOutputStream());
