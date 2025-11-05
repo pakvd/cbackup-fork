@@ -133,8 +133,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      web:
-        condition: service_started
     networks:
       - cbackup_network
     # Entrypoint script will copy JAR and start Java application
