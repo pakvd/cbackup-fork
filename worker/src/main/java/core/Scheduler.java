@@ -28,7 +28,7 @@ import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import java.util.*;
 import org.springframework.stereotype.Component;
-// import sshd.shell.springboot.autoconfiguration.SshdShellCommand; // Temporarily disabled - library not available
+import sshd.shell.springboot.autoconfiguration.SshdShellCommand;
 import org.springframework.beans.factory.annotation.Value;
 import javax.annotation.PostConstruct;
 
@@ -38,7 +38,7 @@ import javax.annotation.PostConstruct;
  * @noinspection unused
  */
 @Component
-// @SshdShellCommand(value = "cbackup", description = "Type 'cbackup' for supported subcommands") // Temporarily disabled
+@SshdShellCommand(value = "cbackup", description = "Type 'cbackup' for supported subcommands")
 public class Scheduler extends AbstractCoreUnit {
 
     private List<String> scheduleIds = new ArrayList<>();
@@ -68,7 +68,7 @@ public class Scheduler extends AbstractCoreUnit {
      * @param arg String - command argument
      * @return String    - command result
      */
-    // @SshdShellCommand(value = "start", description = "Start scheduler. Usage: 'cbackup start [-json]'") // Temporarily disabled
+    @SshdShellCommand(value = "start", description = "Start scheduler. Usage: 'cbackup start [-json]'")
     public String shellCommandStart(String arg) {
 
         Boolean returnJson = false;
@@ -97,7 +97,7 @@ public class Scheduler extends AbstractCoreUnit {
      * @param arg String - command argument
      * @return String    - command result
      */
-    // @SshdShellCommand(value = "restart", description = "Restart scheduler. Usage: 'cbackup restart [-json]'")
+    @SshdShellCommand(value = "restart", description = "Restart scheduler. Usage: 'cbackup restart [-json]'")
     public String shellCommandRestart(String arg) {
 
         Boolean returnJson = false;
@@ -126,7 +126,7 @@ public class Scheduler extends AbstractCoreUnit {
      * @param arg String - command argument
      * @return String    - command result
      */
-    // @SshdShellCommand(value = "stop", description = "Stop scheduler. Usage: 'cbackup stop [-json]'")
+    @SshdShellCommand(value = "stop", description = "Stop scheduler. Usage: 'cbackup stop [-json]'")
     public String shellCommandStop(String arg) {
 
         Boolean returnJson = false;
@@ -155,7 +155,7 @@ public class Scheduler extends AbstractCoreUnit {
      * @param arg String - command argument
      * @return String    - command result
      */
-    // @SshdShellCommand(value = "backup", description = "Single node backup. Usage: 'cbackup backup <NODE ID> [-json]'")
+    @SshdShellCommand(value = "backup", description = "Single node backup. Usage: 'cbackup backup <NODE ID> [-json]'")
     public String shellCommandRunNodeBackup(String arg) {
 
         Boolean returnJson = false;
@@ -191,7 +191,7 @@ public class Scheduler extends AbstractCoreUnit {
      * @param arg String - command argument
      * @return String    - command result
      */
-    // @SshdShellCommand(value = "runtask", description = "Run task by name. Usage: 'cbackup stop <TASK NAME> [-json]'")
+    @SshdShellCommand(value = "runtask", description = "Run task by name. Usage: 'cbackup runtask <TASK NAME> [-json]'")
     public String shellCommandRuntask(String arg) {
 
         Boolean returnJson = false;
@@ -220,7 +220,7 @@ public class Scheduler extends AbstractCoreUnit {
      * @param arg String - command argument
      * @return String    - command result
      */
-    // @SshdShellCommand(value = "status", description = "Get scheduler status. Usage: 'cbackup status [-json]'")
+    @SshdShellCommand(value = "status", description = "Get scheduler status. Usage: 'cbackup status [-json]'")
     public String shellCommandStatus(String arg) {
 
         Boolean returnJson = false;
@@ -249,7 +249,7 @@ public class Scheduler extends AbstractCoreUnit {
      * @param arg String - command argument
      * @return String    - command result
      */
-    // @SshdShellCommand(value = "version", description = "Get scheduler version. Usage: 'cbackup version [-json]'")
+    @SshdShellCommand(value = "version", description = "Get scheduler version. Usage: 'cbackup version [-json]'")
     public String shellCommandVersion(String arg) {
 
         Boolean returnJson = false;

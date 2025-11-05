@@ -129,15 +129,11 @@
             <version>2.3.5</version>
         </dependency>
         <!-- Spring shell service -->
-        <!-- NOTE: Temporarily disabled - library not available in Maven repositories -->
-        <!-- SSH shell functionality disabled - worker will work without SSH commands -->
-        <!--
         <dependency>
             <groupId>io.github.anand1st</groupId>
             <artifactId>sshd-shell-spring-boot-starter</artifactId>
             <version>2.6.0</version>
         </dependency>
-        -->
     </dependencies>
 
     <!-- Explicit dependency overrides to fix security vulnerabilities -->

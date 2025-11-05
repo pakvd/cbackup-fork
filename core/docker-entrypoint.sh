@@ -164,7 +164,7 @@ if [ ! -f "/var/www/html/bin/application.properties" ]; then
     cat > /var/www/html/bin/application.properties << 'EOF'
 # SSH Daemon Shell Configuration
 sshd.shell.port=8437
-sshd.shell.enabled=false
+sshd.shell.enabled=true
 sshd.shell.username=cbadmin
 sshd.shell.password=
 sshd.shell.host=localhost
@@ -214,7 +214,7 @@ if [ ! -f "/var/www/html/bin/application.properties" ]; then
     cat > /var/www/html/bin/application.properties << 'EOF'
 # SSH Daemon Shell Configuration
 sshd.shell.port=8437
-sshd.shell.enabled=false
+sshd.shell.enabled=true
 sshd.shell.username=cbadmin
 sshd.shell.password=KqPOPh2Lf
 sshd.shell.host=localhost
