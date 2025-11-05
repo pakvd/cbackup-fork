@@ -556,7 +556,8 @@ class DeviceController extends Controller
             }
         }
 
-        return $this->renderPartial('_device_form_modal', [
+        // Use renderAjax instead of renderPartial to include asset bundles (select2)
+        return $this->renderAjax('_device_form_modal', [
             'model'     => $model,
             'vendors'   => Vendor::find()->select('name')->indexBy('name')->asArray()->column(),
             'templates' => DeviceAuthTemplate::find()->select('name')->indexBy('name')->asArray()->column()

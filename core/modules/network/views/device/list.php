@@ -186,13 +186,46 @@ $this->registerJs(/** @lang JavaScript */
             var modal = $('#form_modal');
             var url = $(this).attr('href');
             
-            modal.find('#form_modal_content').load(url, function() {
-                modal.modal('show');
-                // Init select2 after modal content is loaded
-                if (typeof $.fn.select2 !== 'undefined') {
-                    $('#form_modal .select2').select2({
-                        width: '100%'
-                    });
+            // Clear previous content
+            modal.find('#form_modal_content').empty();
+            
+            // Load content via AJAX (renderAjax includes scripts)
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'html',
+                success: function(data) {
+                    // Insert HTML content (renderAjax includes scripts in the response)
+                    modal.find('#form_modal_content').html(data);
+                    modal.modal('show');
+                    
+                    // Init select2 after modal is shown and scripts are executed
+                    // renderAjax automatically executes script tags, so select2 should be available
+                    setTimeout(function() {
+                        if (typeof $.fn.select2 !== 'undefined') {
+                            $('#form_modal .select2').select2({
+                                width: '100%'
+                            });
+                        } else {
+                            // Select2 should be loaded on main page, retry
+                            console.warn('select2 not available, retrying...');
+                            setTimeout(function() {
+                                if (typeof $.fn.select2 !== 'undefined') {
+                                    $('#form_modal .select2').select2({
+                                        width: '100%'
+                                    });
+                                } else {
+                                    console.error('select2 library not found. Make sure Select2Asset is registered.');
+                                }
+                            }, 500);
+                        }
+                    }, 300);
+                },
+                error: function(xhr, status, error) {
+                    modal.find('#form_modal_content').html(
+                        '<div class="alert alert-danger">Error loading form: ' + error + '</div>'
+                    );
+                    modal.modal('show');
                 }
             });
             
