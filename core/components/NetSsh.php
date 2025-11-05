@@ -97,11 +97,11 @@ class NetSsh
         $this->ssh = new SSH2($this->ip, $this->port, $this->timeout);
 
         /** Configure preferred algorithms for compatibility with SSHD server
-         *  Support RSA host keys (which SSHD generates by default)
+         *  phpseclib 2.0.9 supports only ssh-rsa for host keys
          *  This resolves "No compatible server host key algorithms found" error
          */
         $preferredAlgorithms = [
-            'hostkey' => ['ssh-rsa', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519']
+            'hostkey' => ['ssh-rsa']
         ];
         $this->ssh->setPreferredAlgorithms($preferredAlgorithms);
 
