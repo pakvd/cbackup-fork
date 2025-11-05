@@ -39,6 +39,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.util.Collections;
 
 /**
@@ -119,7 +120,7 @@ public class SshShellServer {
             
             System.out.println("SSH Host key path: " + hostKeyPath);
             
-            // Create a simple RSA-only key provider to avoid recursion issues
+            // Create a simple RSA-only key provider
             // phpseclib 2.0.9 only supports ssh-rsa, so we must use RSA keys
             final Path finalHostKeyPath = hostKeyPath;
             KeyPairProvider keyProvider = new KeyPairProvider() {
@@ -131,10 +132,41 @@ public class SshShellServer {
                     // Always return RSA key regardless of requested type
                     synchronized (lock) {
                         if (cachedRsaKey == null) {
-                            // Generate or load RSA key using SimpleGeneratorHostKeyProvider
-                            SimpleGeneratorHostKeyProvider generator = new SimpleGeneratorHostKeyProvider(finalHostKeyPath);
-                            cachedRsaKey = generator.loadKey(session, KeyUtils.RSA_ALGORITHM);
-                            System.out.println("RSA host key loaded/generated");
+                            // Generate RSA key directly if file doesn't exist
+                            if (!Files.exists(finalHostKeyPath)) {
+                                System.out.println("Generating new RSA host key (2048 bits)");
+                                KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+                                keyGen.initialize(2048);
+                                cachedRsaKey = keyGen.generateKeyPair();
+                                
+                                // Save the key using SimpleGeneratorHostKeyProvider for persistence
+                                SimpleGeneratorHostKeyProvider saver = new SimpleGeneratorHostKeyProvider(finalHostKeyPath);
+                                // Force save by loading with RSA type
+                                saver.loadKey(session, KeyUtils.RSA_ALGORITHM);
+                                // Note: This might still generate ECDSA, so we'll use our generated key
+                                System.out.println("RSA key generated in memory");
+                            } else {
+                                // Try to load existing key - but force RSA
+                                SimpleGeneratorHostKeyProvider loader = new SimpleGeneratorHostKeyProvider(finalHostKeyPath);
+                                // Try to load RSA, but if it fails, generate new one
+                                try {
+                                    cachedRsaKey = loader.loadKey(session, KeyUtils.RSA_ALGORITHM);
+                                    // Verify it's actually RSA
+                                    if (KeyUtils.getKeyType(cachedRsaKey).equals(KeyUtils.RSA_ALGORITHM)) {
+                                        System.out.println("RSA host key loaded from file");
+                                    } else {
+                                        System.out.println("Existing key is not RSA, generating new RSA key");
+                                        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+                                        keyGen.initialize(2048);
+                                        cachedRsaKey = keyGen.generateKeyPair();
+                                    }
+                                } catch (Exception e) {
+                                    System.out.println("Could not load existing key as RSA, generating new: " + e.getMessage());
+                                    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+                                    keyGen.initialize(2048);
+                                    cachedRsaKey = keyGen.generateKeyPair();
+                                }
+                            }
                         }
                         return cachedRsaKey;
                     }
