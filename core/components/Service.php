@@ -50,7 +50,7 @@ class Service
     public function __construct()
     {
         $options   = [
-            'ip'       => \Y::param('javaHost'),
+            'ip'       => \Y::param('javaHost', '127.0.0.1'),
             'port'     => \Y::param('javaServerPort'),
             'username' => \Y::param('javaServerUsername'),
             'password' => \Y::param('javaServerPassword')

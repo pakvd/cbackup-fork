@@ -71,17 +71,17 @@ class Config extends ActiveRecord
         $fields->addRule([
             'adminEmail', 'dataPath', 'snmpTimeout', 'snmpRetries',
             'telnetTimeout', 'telnetBeforeSendDelay', 'sshTimeout', 'gitDays',
-            'javaServerUsername', 'javaServerPort', 'javaSchedulerUsername', 'javaSchedulerPort',
+            'javaHost', 'javaServerUsername', 'javaServerPort', 'javaSchedulerUsername', 'javaSchedulerPort',
             'sshBeforeSendDelay', 'threadCount', 'logLifetime', 'nodeLifetime'], 'required');
         $fields->addRule([
             'adminEmail', 'gitUsername', 'gitEmail', 'gitLogin', 'gitPassword', 'gitRepo', 'gitPath', 'dataPath', 'snmpTimeout', 'snmpRetries',
             'telnetTimeout', 'telnetBeforeSendDelay', 'sshTimeout', 'sshBeforeSendDelay', 'threadCount', 'logLifetime', 'nodeLifetime',
             'mailerFromEmail', 'mailerFromName', 'mailerSmtpHost', 'mailerSmtpPort', 'mailerSmtpUsername', 'mailerSmtpPassword', 'mailerSendMailPath',
-            'defaultPrependLocation'
+            'defaultPrependLocation', 'javaHost'
         ], 'filter', ['filter' => 'trim']);
         $fields->addRule(['adminEmail'], 'email');
         $fields->addRule(['gitUsername', 'javaServerUsername', 'javaSchedulerUsername'], 'string', ['max' => 64]);
-        $fields->addRule(['adminEmail', 'gitRepo', 'gitPath', 'dataPath', 'defaultPrependLocation'], 'string', ['max' => 255]);
+        $fields->addRule(['adminEmail', 'gitRepo', 'gitPath', 'dataPath', 'defaultPrependLocation', 'javaHost'], 'string', ['max' => 255]);
         $fields->addRule(['git', 'gitRemote'], 'boolean');
         $fields->addRule(['threadCount'], 'integer', ['min' => 1, 'max' => 30]);
         $fields->addRule(['snmpRetries'], 'integer', ['min' => 1, 'max' => 10]);

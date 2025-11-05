@@ -670,6 +670,17 @@ $this->registerJsFile('@web/js/config/script.js', ['depends' => \app\assets\Alph
                             <div class="col-lg-6">
                                 <div class="row">
                                     <?=
+                                        ConfigHelper::formGroup('javaHost', $errors, [
+                                            'label'       => Yii::t('config', 'Java host'),
+                                            'description' => Yii::t('config', 'Hostname or IP address where Java worker daemon is running'),
+                                            'input'       => Html::textInput('Config[javaHost]', $data['javaHost'], ['class' => 'form-control']),
+                                        ])
+                                    ?>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="row">
+                                    <?=
                                         ConfigHelper::formGroup('javaServerUsername', $errors, [
                                             'label'       => Yii::t('config', 'SSH login'),
                                             'description' => Yii::t('config', 'Username to authenticate cbackup web core on the server where java daemon is running'),
@@ -678,6 +689,8 @@ $this->registerJsFile('@web/js/config/script.js', ['depends' => \app\assets\Alph
                                     ?>
                                 </div>
                             </div>
+                        </div>
+                        <div class="row">
                             <div class="col-lg-6">
                                 <div class="row">
                                     <?=

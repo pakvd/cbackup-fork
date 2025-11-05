@@ -64,7 +64,7 @@ class NetSsh
      */
     public function __construct()
     {
-        $this->ip       = \Y::param('javaHost');
+        $this->ip       = \Y::param('javaHost', '127.0.0.1');
         $this->port     = \Y::param('javaSchedulerPort');
         $this->username = \Y::param('javaSchedulerUsername');
         $this->password = \Y::param('javaSchedulerPassword');
@@ -83,8 +83,8 @@ class NetSsh
         array_walk($options, function($value, $option) { $this->$option = $value; });
 
         /** Validate connection parameters */
-        if (empty($this->ip) || $this->ip === null) {
-            throw new \Exception("Java host (javaHost) is not configured. Please set it in System > Configuration.");
+        if (empty($this->ip)) {
+            $this->ip = '127.0.0.1'; // Default value
         }
         if (empty($this->port) || $this->port === null) {
             throw new \Exception("Java scheduler port (javaSchedulerPort) is not configured. Please set it in System > Configuration.");
