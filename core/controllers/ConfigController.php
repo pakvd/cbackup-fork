@@ -77,6 +77,11 @@ class ConfigController extends Controller
         $changed = false;
         $errors  = [];
 
+        // Set default value for javaHost if not exists in database
+        if (!isset($data['javaHost']) || empty($data['javaHost'])) {
+            $data['javaHost'] = '127.0.0.1';
+        }
+
         $config->checkApplicationProperties($data);
 
         if(Yii::$app->request->isPost) {
