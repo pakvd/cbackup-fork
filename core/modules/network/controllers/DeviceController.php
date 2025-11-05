@@ -464,37 +464,44 @@ class DeviceController extends Controller
         $model = new Device();
 
         if (isset($_POST['Device'])) {
+            
+            $postData = $_POST['Device'];
+            
+            // Convert vendor name to vendor_id BEFORE loading data
+            if (isset($postData['vendor']) && !empty($postData['vendor']) && !isset($postData['vendor_id'])) {
+                $vendorName = trim($postData['vendor']);
+                $vendor = Vendor::findOne(['name' => $vendorName]);
+                if ($vendor) {
+                    $postData['vendor_id'] = $vendor->id;
+                } else {
+                    return Json::encode([
+                        'status' => 'validation_failed',
+                        'error' => ['vendor' => [Yii::t('app', 'Vendor not found: {0}', $vendorName)]]
+                    ]);
+                }
+                unset($postData['vendor']); // Remove virtual property
+            }
+            
+            // Convert model to name BEFORE loading data
+            if (isset($postData['model']) && !empty($postData['model']) && !isset($postData['name'])) {
+                $postData['name'] = trim($postData['model']);
+                unset($postData['model']); // Remove virtual property
+            }
+            
+            // Set auth_template_name to null if empty (it's optional)
+            if (isset($postData['auth_template_name'])) {
+                if (empty($postData['auth_template_name']) || trim($postData['auth_template_name']) === '') {
+                    unset($postData['auth_template_name']); // Don't set it, let it be null
+                }
+            }
+            
+            // Update POST data
+            $_POST['Device'] = $postData;
 
             if ($model->load(Yii::$app->request->post())) {
-                
-                // Convert vendor name to vendor_id if vendor is provided as name
-                if (isset($_POST['Device']['vendor']) && !isset($_POST['Device']['vendor_id'])) {
-                    $vendorName = $_POST['Device']['vendor'];
-                    if (!empty($vendorName)) {
-                        $vendor = Vendor::findOne(['name' => $vendorName]);
-                        if ($vendor) {
-                            $model->vendor_id = $vendor->id;
-                        } else {
-                            return Json::encode([
-                                'status' => 'validation_failed',
-                                'error' => ['vendor' => [Yii::t('app', 'Vendor not found')]]
-                            ]);
-                        }
-                    }
-                }
-                
-                // Convert model to name if model is provided
-                if (isset($_POST['Device']['model']) && !isset($_POST['Device']['name'])) {
-                    $model->name = trim($_POST['Device']['model']);
-                }
-                
-                // Set auth_template_name to null if empty (it's optional)
-                if (empty($model->auth_template_name)) {
-                    $model->auth_template_name = null;
-                }
 
-                // Validate after conversion
-                if (!$model->vendor_id) {
+                // Validate required fields after conversion
+                if (empty($model->vendor_id)) {
                     return Json::encode([
                         'status' => 'validation_failed',
                         'error' => ['vendor' => [Yii::t('app', 'Vendor is required')]]
@@ -517,18 +524,35 @@ class DeviceController extends Controller
                         ]);
 
                     } else {
+                        // Get save errors
+                        $saveErrors = $model->errors;
                         $status = Json::encode([
                             'status' => 'error',
-                            'msg'    => Yii::t('app', 'An error occurred while adding record.') . ' ' . print_r($model->errors, true)
+                            'msg'    => Yii::t('app', 'An error occurred while adding record.'),
+                            'error'  => $saveErrors
                         ]);
                     }
 
                     return $status;
 
                 } else {
-                    return Json::encode(['status' => 'validation_failed', 'error' => $model->errors]);
+                    // Validation failed - return detailed errors
+                    $errors = [];
+                    foreach ($model->errors as $field => $fieldErrors) {
+                        $errors[$field] = is_array($fieldErrors) ? $fieldErrors[0] : $fieldErrors;
+                    }
+                    return Json::encode([
+                        'status' => 'validation_failed',
+                        'error' => $errors
+                    ]);
                 }
 
+            } else {
+                // If load failed, return errors
+                return Json::encode([
+                    'status' => 'error',
+                    'msg'    => Yii::t('app', 'Failed to load device data.') . ' POST data: ' . print_r($_POST, true)
+                ]);
             }
         }
 
