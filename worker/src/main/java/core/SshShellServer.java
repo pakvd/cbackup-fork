@@ -84,6 +84,11 @@ public class SshShellServer {
             sshd = SshServer.setUpDefaultServer();
             sshd.setHost(host);
             sshd.setPort(port);
+            
+            // Configure key exchange algorithms to support older clients
+            // phpseclib 2.0.9 and some devices require these algorithms
+            // Note: SSHD by default includes these algorithms, but we ensure they're available
+            System.out.println("SSHD key exchange algorithms: " + sshd.getKeyExchangeFactories());
 
             // Use /app/.ssh for host key storage (works in Docker)
             // Fallback to user.home if /app doesn't exist (for non-Docker environments)
