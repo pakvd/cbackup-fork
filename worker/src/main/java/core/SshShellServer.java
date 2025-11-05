@@ -90,14 +90,17 @@ public class SshShellServer {
                 java.util.List<?> kexFactories = sshd.getKeyExchangeFactories();
                 System.out.println("SSHD available key exchange algorithms (" + kexFactories.size() + "):");
                 for (Object factory : kexFactories) {
-                    try {
-                        // Try to get name via reflection
-                        java.lang.reflect.Method getNameMethod = factory.getClass().getMethod("getName");
-                        String name = (String) getNameMethod.invoke(factory);
-                        System.out.println("  - " + name);
-                    } catch (Exception e) {
-                        System.out.println("  - " + factory.getClass().getSimpleName());
+                    String name = factory.toString();
+                    // Try to extract name from toString() output
+                    if (name.contains("name=")) {
+                        name = name.substring(name.indexOf("name=") + 5);
+                        if (name.contains(",")) {
+                            name = name.substring(0, name.indexOf(","));
+                        }
+                    } else if (name.contains("@")) {
+                        name = factory.getClass().getSimpleName();
                     }
+                    System.out.println("  - " + name);
                 }
             } catch (Exception e) {
                 System.out.println("Warning: Could not log key exchange algorithms: " + e.getMessage());

@@ -107,11 +107,12 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
         <!-- JSch SSH library -->
-        <!-- https://mvnrepository.com/artifact/com.jcraft/jsch -->
+        <!-- Updated to mwiede/jsch fork which supports modern key exchange algorithms -->
+        <!-- https://mvnrepository.com/artifact/com.github.mwiede/jsch -->
         <dependency>
-            <groupId>com.jcraft</groupId>
+            <groupId>com.github.mwiede</groupId>
             <artifactId>jsch</artifactId>
-            <version>0.1.55</version>
+            <version>0.2.15</version>
         </dependency>
         <!-- javax.xml.bind for Java 11+ compatibility -->
         <!-- https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api -->
