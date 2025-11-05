@@ -468,18 +468,36 @@ class DeviceController extends Controller
             $postData = $_POST['Device'];
             
             // Convert vendor name to vendor_id BEFORE loading data
-            if (isset($postData['vendor']) && !empty($postData['vendor']) && !isset($postData['vendor_id'])) {
-                $vendorName = trim($postData['vendor']);
-                $vendor = Vendor::findOne(['name' => $vendorName]);
-                if ($vendor) {
-                    $postData['vendor_id'] = $vendor->id;
-                } else {
+            // Check if vendor is provided (may be empty string from select2)
+            if (isset($postData['vendor'])) {
+                $vendorValue = trim($postData['vendor']);
+                if (empty($vendorValue) || $vendorValue === '' || $vendorValue === '0') {
+                    // Vendor is required
                     return Json::encode([
                         'status' => 'validation_failed',
-                        'error' => ['vendor' => [Yii::t('app', 'Vendor not found: {0}', $vendorName)]]
+                        'error' => ['vendor' => [Yii::t('app', 'Vendor is required')]]
                     ]);
                 }
+                
+                // Convert vendor name to vendor_id
+                if (!isset($postData['vendor_id'])) {
+                    $vendor = Vendor::findOne(['name' => $vendorValue]);
+                    if ($vendor) {
+                        $postData['vendor_id'] = $vendor->id;
+                    } else {
+                        return Json::encode([
+                            'status' => 'validation_failed',
+                            'error' => ['vendor' => [Yii::t('app', 'Vendor not found: {0}', $vendorValue)]]
+                        ]);
+                    }
+                }
                 unset($postData['vendor']); // Remove virtual property
+            } else {
+                // Vendor field is missing entirely
+                return Json::encode([
+                    'status' => 'validation_failed',
+                    'error' => ['vendor' => [Yii::t('app', 'Vendor is required')]]
+                ]);
             }
             
             // Convert model to name BEFORE loading data
@@ -497,6 +515,11 @@ class DeviceController extends Controller
             
             // Update POST data
             $_POST['Device'] = $postData;
+
+            // Debug: log POST data if vendor is missing
+            if (empty($postData['vendor_id'])) {
+                Yii::error('Vendor ID is missing. POST data: ' . print_r($_POST, true), 'device');
+            }
 
             if ($model->load(Yii::$app->request->post())) {
 

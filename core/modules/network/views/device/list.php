@@ -236,8 +236,42 @@ $this->registerJs(/** @lang JavaScript */
         });
         
         /** Device form AJAX submit handler */
-        $(document).on("submit", "#device_form", function () {
-            modalFormHandler($(this), "form_modal", "save");
+        $(document).on("submit", "#device_form", function (e) {
+            e.preventDefault();
+            
+            var form = $(this);
+            var vendorField = form.find("#device-vendor");
+            var modelField = form.find("#device-model");
+            
+            // Client-side validation
+            var hasErrors = false;
+            
+            // Check vendor
+            var vendorValue = vendorField.val();
+            if (!vendorValue || vendorValue === "" || vendorValue === "0") {
+                vendorField.closest(".form-group").addClass("has-error");
+                toastr.error("Vendor is required", "", {toastClass: "no-shadow", timeOut: 5000, closeButton: true});
+                hasErrors = true;
+            } else {
+                vendorField.closest(".form-group").removeClass("has-error");
+            }
+            
+            // Check model
+            var modelValue = modelField.val();
+            if (!modelValue || modelValue.trim() === "") {
+                modelField.closest(".form-group").addClass("has-error");
+                toastr.error("Model is required", "", {toastClass: "no-shadow", timeOut: 5000, closeButton: true});
+                hasErrors = true;
+            } else {
+                modelField.closest(".form-group").removeClass("has-error");
+            }
+            
+            if (hasErrors) {
+                return false;
+            }
+            
+            // If validation passes, submit via modalFormHandler
+            modalFormHandler(form, "form_modal", "save");
             return false;
         });
         

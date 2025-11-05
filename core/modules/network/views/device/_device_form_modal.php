@@ -57,10 +57,11 @@ app\assets\LaddaAsset::register($this);
                 <div class="col-md-12">
                     <?php
                         echo $form->field($model, 'vendor')->dropDownList($vendors, [
-                            'prompt'            => '',
+                            'prompt'            => Yii::t('network', 'Choose vendor'),
                             'class'             => 'select2',
-                            'data-placeholder'  => Yii::t('network', 'Choose vendor')
-                        ]);
+                            'data-placeholder'  => Yii::t('network', 'Choose vendor'),
+                            'options'           => ['' => ['disabled' => true, 'selected' => true]]
+                        ])->label(Yii::t('network', 'Vendor') . ' <span class="text-red">*</span>');
                     ?>
                 </div>
                 <div class="col-md-12">
@@ -68,7 +69,7 @@ app\assets\LaddaAsset::register($this);
                         echo $form->field($model, 'model')->textInput([
                             'class'        => 'form-control',
                             'placeholder'  => FormHelper::label($model, 'model'),
-                        ]);
+                        ])->label(Yii::t('network', 'Model') . ' <span class="text-red">*</span>');
                     ?>
                 </div>
                 <div class="col-md-12">
