@@ -86,10 +86,21 @@ public class SshShellServer {
             sshd.setPort(port);
             
             // Log available key exchange algorithms for debugging
-            var kexFactories = sshd.getKeyExchangeFactories();
-            System.out.println("SSHD available key exchange algorithms (" + kexFactories.size() + "):");
-            for (var factory : kexFactories) {
-                System.out.println("  - " + factory.getName());
+            try {
+                java.util.List<?> kexFactories = sshd.getKeyExchangeFactories();
+                System.out.println("SSHD available key exchange algorithms (" + kexFactories.size() + "):");
+                for (Object factory : kexFactories) {
+                    try {
+                        // Try to get name via reflection
+                        java.lang.reflect.Method getNameMethod = factory.getClass().getMethod("getName");
+                        String name = (String) getNameMethod.invoke(factory);
+                        System.out.println("  - " + name);
+                    } catch (Exception e) {
+                        System.out.println("  - " + factory.getClass().getSimpleName());
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Warning: Could not log key exchange algorithms: " + e.getMessage());
             }
 
             // Use /app/.ssh for host key storage (works in Docker)
