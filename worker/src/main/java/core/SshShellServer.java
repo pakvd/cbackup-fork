@@ -126,8 +126,9 @@ public class SshShellServer {
             final KeyPair rsaKeyPair = keyGen.generateKeyPair();
             
             // Verify it's RSA
+            // KeyUtils.getKeyType() returns "ssh-rsa" for RSA keys, which is correct
             String actualType = KeyUtils.getKeyType(rsaKeyPair);
-            if (!KeyUtils.RSA_ALGORITHM.equals(actualType)) {
+            if (!actualType.equals("ssh-rsa") && !actualType.equals(KeyUtils.RSA_ALGORITHM)) {
                 throw new GeneralSecurityException("Generated key is not RSA: " + actualType);
             }
             System.out.println("RSA host key generated successfully (type: " + actualType + ")");
