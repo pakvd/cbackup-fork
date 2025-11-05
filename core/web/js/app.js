@@ -679,10 +679,25 @@ var modalFormHandler = function ($form_obj, $modal_id, $btn_id) {
     toastr.clear();
 
     /** Submit form */
+    // Ensure select2 values are included in form data
+    $form.find('.select2').each(function() {
+        var $select = $(this);
+        if ($select.hasClass('select2-hidden-accessible')) {
+            // If select2 is initialized, ensure value is set on original select
+            var val = $select.select2('val');
+            if (val) {
+                $select.val(val).trigger('change');
+            }
+        }
+    });
+    
+    var formData = $form.serialize();
+    console.log('Sending form data:', formData);
+    
     $.ajax({
         url    : $form.attr('action'),
         type   : 'post',
-        data   : $form.serialize(),
+        data   : formData,
         beforeSend: function() {
             if ($btn_lock) {
                 $btn_lock.start();

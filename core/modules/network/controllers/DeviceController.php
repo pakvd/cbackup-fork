@@ -467,6 +467,10 @@ class DeviceController extends Controller
             
             $postData = $_POST['Device'];
             
+            // Debug: log all POST data
+            Yii::info('Device POST data: ' . print_r($postData, true), 'device');
+            Yii::info('Full $_POST: ' . print_r($_POST, true), 'device');
+            
             // Convert vendor name to vendor_id BEFORE loading data
             // Check if vendor is provided (may be empty string from select2)
             if (isset($postData['vendor'])) {

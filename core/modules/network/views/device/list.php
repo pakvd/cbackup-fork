@@ -240,15 +240,37 @@ $this->registerJs(/** @lang JavaScript */
             e.preventDefault();
             
             var form = $(this);
-            var vendorField = form.find("#device-vendor");
-            var modelField = form.find("#device-model");
+            
+            // Get fields - try different selectors in case IDs are different
+            var vendorField = form.find("select[name=\"Device[vendor]\"]");
+            if (vendorField.length === 0) {
+                vendorField = form.find("#device-vendor");
+            }
+            if (vendorField.length === 0) {
+                vendorField = form.find("select[name*=\"vendor\"]").first();
+            }
+            
+            var modelField = form.find("input[name=\"Device[model]\"]");
+            if (modelField.length === 0) {
+                modelField = form.find("#device-model");
+            }
+            if (modelField.length === 0) {
+                modelField = form.find("input[name*=\"model\"]").first();
+            }
             
             // Client-side validation
             var hasErrors = false;
             
-            // Check vendor
+            // Check vendor - for select2, need to get value properly
             var vendorValue = vendorField.val();
-            if (!vendorValue || vendorValue === "" || vendorValue === "0") {
+            if (vendorField.hasClass("select2")) {
+                // If select2 is initialized, get value from select2
+                if (typeof vendorField.select2 !== "undefined") {
+                    vendorValue = vendorField.select2("val");
+                }
+            }
+            
+            if (!vendorValue || vendorValue === "" || vendorValue === "0" || vendorValue === null) {
                 vendorField.closest(".form-group").addClass("has-error");
                 toastr.error("Vendor is required", "", {toastClass: "no-shadow", timeOut: 5000, closeButton: true});
                 hasErrors = true;
@@ -269,6 +291,11 @@ $this->registerJs(/** @lang JavaScript */
             if (hasErrors) {
                 return false;
             }
+            
+            // Debug: log form data before sending
+            console.log("Form data:", form.serialize());
+            console.log("Vendor value:", vendorValue);
+            console.log("Model value:", modelValue);
             
             // If validation passes, submit via modalFormHandler
             modalFormHandler(form, "form_modal", "save");
