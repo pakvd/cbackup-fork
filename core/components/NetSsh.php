@@ -92,6 +92,12 @@ class NetSsh
         if (empty($this->port) || $this->port === null) {
             throw new \Exception("Java scheduler port (javaSchedulerPort) is not configured. Please set it in System > Configuration.");
         }
+        if (empty($this->username)) {
+            throw new \Exception("Java scheduler username (javaSchedulerUsername) is not configured. Please set it in System > Configuration.");
+        }
+        if (empty($this->password)) {
+            throw new \Exception("Java scheduler password (javaSchedulerPassword) is not configured. Please set it in System > Configuration.");
+        }
 
         /** Connect to device */
         $this->ssh = new SSH2($this->ip, $this->port, $this->timeout);

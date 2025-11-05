@@ -169,8 +169,16 @@ public class SshShellServer {
             sshd.setPasswordAuthenticator(new PasswordAuthenticator() {
                 @Override
                 public boolean authenticate(String username, String password, ServerSession session) {
-                    return SshShellServer.this.username.equals(username) && 
-                           SshShellServer.this.password.equals(password);
+                    boolean authenticated = SshShellServer.this.username.equals(username) && 
+                                          SshShellServer.this.password.equals(password);
+                    if (!authenticated) {
+                        System.out.println("SSH authentication failed - Username: '" + username + 
+                                         "', Expected: '" + SshShellServer.this.username + 
+                                         "', Password match: " + SshShellServer.this.password.equals(password));
+                    } else {
+                        System.out.println("SSH authentication successful for user: " + username);
+                    }
+                    return authenticated;
                 }
             });
 
