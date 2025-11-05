@@ -92,8 +92,26 @@ public final class ApiCaller {
 
             /*
              * Create URI
+             * Handle site as hostname or hostname/path
              */
-            URIBuilder uribuilder = new URIBuilder().setScheme(request.coordinates.get("scheme")).setHost(request.coordinates.get("site")).addParameter("r", request.apiMethod);
+            String site = request.coordinates.get("site");
+            String host;
+            String path = null;
+            
+            // Check if site contains a path
+            if (site != null && site.contains("/")) {
+                int firstSlash = site.indexOf("/");
+                host = site.substring(0, firstSlash);
+                path = site.substring(firstSlash);
+            } else {
+                host = site;
+            }
+            
+            URIBuilder uribuilder = new URIBuilder().setScheme(request.coordinates.get("scheme")).setHost(host);
+            if (path != null) {
+                uribuilder.setPath(path);
+            }
+            uribuilder.addParameter("r", request.apiMethod);
 
             /*
              * Add GET params
@@ -183,8 +201,26 @@ public final class ApiCaller {
 
             /*
              * Create URI
+             * Handle site as hostname or hostname/path
              */
-            URIBuilder uribuilder = new URIBuilder().setScheme(request.coordinates.get("scheme")).setHost(request.coordinates.get("site")).addParameter("r", request.apiMethod);
+            String site = request.coordinates.get("site");
+            String host;
+            String path = null;
+            
+            // Check if site contains a path
+            if (site != null && site.contains("/")) {
+                int firstSlash = site.indexOf("/");
+                host = site.substring(0, firstSlash);
+                path = site.substring(firstSlash);
+            } else {
+                host = site;
+            }
+            
+            URIBuilder uribuilder = new URIBuilder().setScheme(request.coordinates.get("scheme")).setHost(host);
+            if (path != null) {
+                uribuilder.setPath(path);
+            }
+            uribuilder.addParameter("r", request.apiMethod);
 
             /*
              * Get url from URI builder

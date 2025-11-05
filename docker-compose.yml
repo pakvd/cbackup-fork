@@ -48,6 +48,7 @@ services:
     volumes:
       - ./core:/var/www/html
       - web_runtime:/var/www/html/runtime
+      - web_vendor:/var/www/html/vendor
     depends_on:
       db:
         condition: service_healthy
@@ -142,6 +143,8 @@ volumes:
   web_runtime:
     driver: local
   web_assets:
+    driver: local
+  web_vendor:
     driver: local
   redis_data:
     driver: local
