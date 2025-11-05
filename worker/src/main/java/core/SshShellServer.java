@@ -119,24 +119,25 @@ public class SshShellServer {
             
             // Create host key provider that generates RSA keys (not ECDSA)
             // phpseclib 2.0.9 only supports ssh-rsa, so we must generate RSA keys
-            SimpleGeneratorHostKeyProvider keyProvider = new SimpleGeneratorHostKeyProvider(hostKeyPath) {
+            // Use separate RSA key path to avoid conflicts
+            Path rsaKeyPath = Paths.get(hostKeyPath.toString() + "_rsa");
+            
+            // Delete old ECDSA key if exists
+            if (Files.exists(hostKeyPath)) {
+                try {
+                    Files.delete(hostKeyPath);
+                    System.out.println("Deleted old SSH host key for regeneration");
+                } catch (IOException e) {
+                    System.err.println("Warning: Could not delete old host key: " + e.getMessage());
+                }
+            }
+            
+            SimpleGeneratorHostKeyProvider keyProvider = new SimpleGeneratorHostKeyProvider(rsaKeyPath) {
                 @Override
                 public KeyPair loadKey(SessionContext session, String keyType) throws IOException, GeneralSecurityException {
                     // Force RSA key generation for compatibility with phpseclib
                     // Always use RSA regardless of requested key type
                     return super.loadKey(session, KeyUtils.RSA_ALGORITHM);
-                }
-                
-                @Override
-                public java.util.List<KeyPair> loadKeys(SessionContext session) {
-                    // Force only RSA keys to be loaded/generated
-                    try {
-                        KeyPair rsaKey = loadKey(session, KeyUtils.RSA_ALGORITHM);
-                        return java.util.Collections.singletonList(rsaKey);
-                    } catch (IOException | GeneralSecurityException e) {
-                        System.err.println("Error loading RSA key: " + e.getMessage());
-                        return java.util.Collections.emptyList();
-                    }
                 }
             };
             
