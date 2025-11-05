@@ -25,6 +25,7 @@ import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.shell.ShellFactory;
 import org.apache.sshd.server.channel.ChannelSession;
 import org.apache.sshd.common.config.keys.KeyUtils;
+import org.apache.sshd.common.keyprovider.KeyPairProvider;
 import org.apache.sshd.common.session.SessionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +39,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
+import java.util.Collections;
 
 /**
  * SSH Shell Server using Apache MINA SSHD
@@ -117,27 +119,37 @@ public class SshShellServer {
             
             System.out.println("SSH Host key path: " + hostKeyPath);
             
-            // Create host key provider that generates RSA keys (not ECDSA)
-            // phpseclib 2.0.9 only supports ssh-rsa, so we must generate RSA keys
-            // Use separate RSA key path to avoid conflicts
-            Path rsaKeyPath = Paths.get(hostKeyPath.toString() + "_rsa");
-            
-            // Delete old ECDSA key if exists
-            if (Files.exists(hostKeyPath)) {
-                try {
-                    Files.delete(hostKeyPath);
-                    System.out.println("Deleted old SSH host key for regeneration");
-                } catch (IOException e) {
-                    System.err.println("Warning: Could not delete old host key: " + e.getMessage());
-                }
-            }
-            
-            SimpleGeneratorHostKeyProvider keyProvider = new SimpleGeneratorHostKeyProvider(rsaKeyPath) {
+            // Create a simple RSA-only key provider to avoid recursion issues
+            // phpseclib 2.0.9 only supports ssh-rsa, so we must use RSA keys
+            final Path finalHostKeyPath = hostKeyPath;
+            KeyPairProvider keyProvider = new KeyPairProvider() {
+                private KeyPair cachedRsaKey = null;
+                private final Object lock = new Object();
+                
                 @Override
                 public KeyPair loadKey(SessionContext session, String keyType) throws IOException, GeneralSecurityException {
-                    // Force RSA key generation for compatibility with phpseclib
-                    // Always use RSA regardless of requested key type
-                    return super.loadKey(session, KeyUtils.RSA_ALGORITHM);
+                    // Always return RSA key regardless of requested type
+                    synchronized (lock) {
+                        if (cachedRsaKey == null) {
+                            // Generate or load RSA key using SimpleGeneratorHostKeyProvider
+                            SimpleGeneratorHostKeyProvider generator = new SimpleGeneratorHostKeyProvider(finalHostKeyPath);
+                            cachedRsaKey = generator.loadKey(session, KeyUtils.RSA_ALGORITHM);
+                            System.out.println("RSA host key loaded/generated");
+                        }
+                        return cachedRsaKey;
+                    }
+                }
+                
+                @Override
+                public Iterable<KeyPair> loadKeys(SessionContext session) {
+                    try {
+                        KeyPair rsaKey = loadKey(session, KeyUtils.RSA_ALGORITHM);
+                        return Collections.singletonList(rsaKey);
+                    } catch (Exception e) {
+                        System.err.println("Error loading RSA key: " + e.getMessage());
+                        e.printStackTrace();
+                        return Collections.emptyList();
+                    }
                 }
             };
             
