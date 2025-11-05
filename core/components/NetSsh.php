@@ -135,6 +135,8 @@ class NetSsh
      */
     public function schedulerExec(string $command):array
     {
+        error_log("NetSsh::schedulerExec() called with command: " . $command);
+        
         /** Wait for initial prompt - increase timeout for first read */
         $this->ssh->setTimeout(15);
         
@@ -147,8 +149,10 @@ class NetSsh
         }
         
         /** Execute command */
+        error_log("NetSsh::schedulerExec() writing command: " . $command);
         $this->ssh->write("{$command}\n");
         $this->ssh->setTimeout(30);
+        error_log("NetSsh::schedulerExec() command written, starting to read output");
 
         /** Read command output */
         try {
@@ -196,22 +200,28 @@ class NetSsh
             if (empty($output)) {
                 error_log("Warning: Empty output from SSH command: " . $command);
             } else {
-                error_log("SSH command output (first 200 chars): " . substr($output, 0, 200));
+                error_log("SSH command output length: " . strlen($output) . " chars");
+                error_log("SSH command output (first 500 chars): " . substr($output, 0, 500));
             }
         } catch (\Exception $e) {
+            error_log("NetSsh::schedulerExec() Exception reading output: " . $e->getMessage());
             throw new \Exception("Failed to read command output: " . $e->getMessage());
         }
 
+        error_log("NetSsh::schedulerExec() Checking for JSON in output");
         /** Show console output if error occurs */
         if (!preg_match('/{.*}/i', $output, $json)) {
+            error_log("NetSsh::schedulerExec() No JSON found in output, treating as error. Output: " . substr($output, 0, 200));
             $ansi = new ANSI();
             $ansi->appendString($output);
             $prep_output = htmlspecialchars_decode(strip_tags($ansi->getScreen()));
             $error_array = explode("\n", $prep_output);
             $error_text  = (array_key_exists(1, $error_array) && !empty($error_array[1])) ? $error_array[1] : $prep_output;
+            error_log("NetSsh::schedulerExec() Error text: " . $error_text);
             throw new \Exception($error_text);
         }
 
+        error_log("NetSsh::schedulerExec() JSON found, decoding: " . $json[0]);
         return Json::decode($json[0]);
     }
 
