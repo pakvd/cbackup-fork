@@ -255,10 +255,16 @@ class NodeController extends Controller
             'task_info'    => Task::findOne('backup'),
             'commit_log'   => (Config::isGitRepo()) ? Node::getBackupCommitLog($id) : null,
             'int_provider' => $int_provider,
-            'templates'    => DeviceAuthTemplate::find()->select('name')->indexBy('name')->asArray()->column(),
-            'networks'     => $networks,
+            'templates'    => array_filter(DeviceAuthTemplate::find()->select('name')->indexBy('name')->asArray()->column(), function($key) {
+                return !empty($key) && $key !== '';
+            }, ARRAY_FILTER_USE_KEY),
+            'networks'     => array_filter($networks, function($key) {
+                return !empty($key) && $key !== '';
+            }, ARRAY_FILTER_USE_KEY),
             'plugins'      => Plugin::find()->where(['enabled' => '1', 'widget' => 'node'])->all(),
-            'credentials'  => Credential::find()->select('name')->indexBy('id')->asArray()->column(),
+            'credentials'  => array_filter(Credential::find()->select('name')->indexBy('id')->asArray()->column(), function($key) {
+                return !empty($key) && $key !== null && $key !== '';
+            }, ARRAY_FILTER_USE_KEY),
         ]);
     }
 

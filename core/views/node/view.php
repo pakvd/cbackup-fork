@@ -181,7 +181,8 @@ $this->params['breadcrumbs'][] = $this->title;
                                         ?>
                                     </span>
                                     <?php
-                                        echo Html::dropDownList('', $data->credential_id, $credentials, [
+                                        $selected_credential = (!is_null($data->credential_id) && isset($credentials[$data->credential_id])) ? $data->credential_id : null;
+                                        echo Html::dropDownList('', $selected_credential, $credentials, [
                                             'id'               => 'credentials_select_box',
                                             'class'            => 'select2-small',
                                             'prompt'           => '',
@@ -440,7 +441,11 @@ $this->params['breadcrumbs'][] = $this->title;
                                                     </div>
                                                     <div class="subnets hide">
                                                         <?php
-                                                            echo Html::dropDownList('', '', $networks, [
+                                                            // Filter out any entries with empty or null keys
+                                                            $filtered_networks = array_filter($networks, function($key) {
+                                                                return !empty($key) && $key !== '';
+                                                            }, ARRAY_FILTER_USE_KEY);
+                                                            echo Html::dropDownList('', '', $filtered_networks, [
                                                                 'prompt'           => '',
                                                                 'class'            => 'select2-small-search network_select',
                                                                 'data-placeholder' => Yii::t('network', 'Choose network'),
@@ -660,8 +665,12 @@ $this->params['breadcrumbs'][] = $this->title;
                                 ?>
                             </span>
                             <?php
-                                $selected_template = (!is_null($data->auth_template_name)) ? $data->auth_template_name : '';
-                                echo Html::dropDownList('', $selected_template, $templates, [
+                                $selected_template = (!is_null($data->auth_template_name) && !empty($data->auth_template_name) && isset($templates[$data->auth_template_name])) ? $data->auth_template_name : null;
+                                // Filter out any entries with empty or null keys
+                                $filtered_templates = array_filter($templates, function($key) {
+                                    return !empty($key) && $key !== '';
+                                }, ARRAY_FILTER_USE_KEY);
+                                echo Html::dropDownList('', $selected_template, $filtered_templates, [
                                     'id'                 => 'auth_template_list',
                                     'class'              => 'select2-normal',
                                     'prompt'             => '',
@@ -669,7 +678,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                     'data-allow-clear'   => 'true',
                                     'data-url'           => Url::to(['network/device/ajax-auth-template-preview']),
                                     'data-update-url'    => Url::to(['network/device/ajax-update-templates']),
-                                    'data-default-value' => $data->device->auth_template_name
+                                    'data-default-value' => (isset($data->device->auth_template_name)) ? $data->device->auth_template_name : ''
                                 ]);
                             ?>
                             <div class="input-group-btn">
