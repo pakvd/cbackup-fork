@@ -91,20 +91,19 @@ public class SshShellServer {
                 System.out.println("SSHD available key exchange algorithms (" + kexFactories.size() + "):");
                 for (Object factory : kexFactories) {
                     String name = factory.toString();
-                    // Try to extract name from toString() output
-                    if (name.contains("name=")) {
-                        name = name.substring(name.indexOf("name=") + 5);
-                        if (name.contains(",")) {
-                            name = name.substring(0, name.indexOf(","));
-                        }
-                    } else if (name.contains("@")) {
-                        name = factory.getClass().getSimpleName();
+                    // Extract name from toString() output like "NamedFactory<KeyExchange>[diffie-hellman-group14-sha256]"
+                    if (name.contains("[") && name.contains("]")) {
+                        name = name.substring(name.indexOf("[") + 1, name.indexOf("]"));
                     }
                     System.out.println("  - " + name);
                 }
             } catch (Exception e) {
                 System.out.println("Warning: Could not log key exchange algorithms: " + e.getMessage());
             }
+            
+            // Note: SSHD 2.11.0 by default includes modern algorithms but may exclude legacy ones
+            // Legacy devices may require diffie-hellman-group-exchange-sha1 and diffie-hellman-group14-sha1
+            // These are typically handled by JSch client configuration, not SSHD server
 
             // Use /app/.ssh for host key storage (works in Docker)
             // Fallback to user.home if /app doesn't exist (for non-Docker environments)
