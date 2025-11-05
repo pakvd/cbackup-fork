@@ -519,16 +519,41 @@ class DeviceController extends Controller
             
             // Update POST data
             $_POST['Device'] = $postData;
+            
+            // Debug: log converted data
+            Yii::info('Converted POST data: ' . print_r($postData, true), 'device');
 
             // Debug: log POST data if vendor is missing
             if (empty($postData['vendor_id'])) {
-                Yii::error('Vendor ID is missing. POST data: ' . print_r($_POST, true), 'device');
+                Yii::error('Vendor ID is missing after conversion. POST data: ' . print_r($postData, true), 'device');
+                return Json::encode([
+                    'status' => 'validation_failed',
+                    'error' => ['vendor' => [Yii::t('app', 'Vendor is required')]]
+                ]);
             }
 
+            // Load model with converted data
             if ($model->load(Yii::$app->request->post())) {
+                
+                // Force set converted values (load may not work if fields are virtual)
+                if (isset($postData['vendor_id'])) {
+                    $model->vendor_id = $postData['vendor_id'];
+                }
+                
+                if (isset($postData['name'])) {
+                    $model->name = $postData['name'];
+                }
+                
+                if (isset($postData['auth_template_name']) && !empty($postData['auth_template_name'])) {
+                    $model->auth_template_name = $postData['auth_template_name'];
+                } else {
+                    $model->auth_template_name = null;
+                }
 
                 // Validate required fields after conversion
+                
                 if (empty($model->vendor_id)) {
+                    Yii::error('Vendor ID is still empty after load. Model data: ' . print_r($model->attributes, true), 'device');
                     return Json::encode([
                         'status' => 'validation_failed',
                         'error' => ['vendor' => [Yii::t('app', 'Vendor is required')]]
@@ -536,6 +561,7 @@ class DeviceController extends Controller
                 }
                 
                 if (empty($model->name)) {
+                    Yii::error('Model name is still empty after load. Model data: ' . print_r($model->attributes, true), 'device');
                     return Json::encode([
                         'status' => 'validation_failed',
                         'error' => ['model' => [Yii::t('app', 'Model is required')]]
