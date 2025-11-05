@@ -118,6 +118,8 @@ services:
       dockerfile: Dockerfile
     container_name: cbackup_worker
     restart: unless-stopped
+    ports:
+      - "${SSH_SHELL_PORT:-8437}:8437"
     environment:
       # Security: useSSL=true recommended for production (requires SSL certificates)
       # For development: useSSL=false is acceptable if MySQL is only accessible within Docker network
@@ -131,6 +133,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      web:
+        condition: service_started
     networks:
       - cbackup_network
     # Entrypoint script will copy JAR and start Java application
