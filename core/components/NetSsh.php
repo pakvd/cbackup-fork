@@ -152,7 +152,43 @@ class NetSsh
 
         /** Read command output */
         try {
-            $output = $this->ssh->read('/.*[>]\s$/', $this->ssh::READ_REGEX);
+            // Read output until we see the prompt again
+            // The prompt format is "cbackup> " (with space after >)
+            // Try multiple patterns to match the prompt
+            $patterns = [
+                '/cbackup>\s*$/m',           // Exact match with optional spaces
+                '/cbackup>\s*$/s',           // With dotall flag
+                '/.*cbackup>\s*$/m',         // Match anything before prompt
+                '/cbackup>\s*$/',             // Simple match
+            ];
+            
+            $output = null;
+            $lastException = null;
+            
+            foreach ($patterns as $pattern) {
+                try {
+                    $output = $this->ssh->read($pattern, $this->ssh::READ_REGEX);
+                    break;
+                } catch (\Exception $e) {
+                    $lastException = $e;
+                    continue;
+                }
+            }
+            
+            if ($output === null) {
+                throw $lastException ?: new \Exception("Could not read output with any pattern");
+            }
+            
+            // Remove the prompt from the end of output
+            $output = preg_replace('/cbackup>\s*$/m', '', $output);
+            $output = trim($output);
+            
+            // Log for debugging
+            if (empty($output)) {
+                error_log("Warning: Empty output from SSH command: " . $command);
+            } else {
+                error_log("SSH command output length: " . strlen($output) . " chars");
+            }
         } catch (\Exception $e) {
             throw new \Exception("Failed to read command output: " . $e->getMessage());
         }

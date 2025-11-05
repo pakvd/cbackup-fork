@@ -100,12 +100,25 @@ public class CbackupShellHandler implements Command {
 
                     String[] parts = line.trim().split("\\s+");
                     String command = parts[0].toLowerCase();
-                    String args = parts.length > 1 ? line.substring(parts[0].length()).trim() : "";
-
+                    String args;
+                    
+                    // Handle "cbackup" prefix - if command is "cbackup", use next part as command
+                    if (command.equals("cbackup") && parts.length > 1) {
+                        command = parts[1].toLowerCase();
+                        args = parts.length > 2 ? line.substring(line.indexOf(parts[1]) + parts[1].length()).trim() : "";
+                        System.out.println("Received command with cbackup prefix: " + command + " with args: " + args);
+                    } else {
+                        args = parts.length > 1 ? line.substring(parts[0].length()).trim() : "";
+                        System.out.println("Received command: " + command + " with args: " + args);
+                    }
+                    
                     String result = processCommand(command, args, errorWriter);
-                    if (result != null) {
+                    if (result != null && !result.isEmpty()) {
+                        System.out.println("Command result length: " + result.length());
                         writer.println(result);
                         writer.flush();
+                    } else {
+                        System.out.println("Command returned null or empty result");
                     }
                     writer.print("cbackup> ");
                     writer.flush();
