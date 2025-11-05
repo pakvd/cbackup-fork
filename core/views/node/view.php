@@ -631,7 +631,11 @@ $this->params['breadcrumbs'][] = $this->title;
                         </tr>
                         <tr>
                             <th><?= Yii::t('network', 'SNMP version') ?></th>
-                            <td><?= Y::param('snmp_versions')[$credential->snmp_version] ?></td>
+                            <td><?php
+                                $snmp_versions = Y::param('snmp_versions', []);
+                                $snmp_version = !empty($credential->snmp_version) ? $credential->snmp_version : '';
+                                echo (isset($snmp_versions[$snmp_version])) ? $snmp_versions[$snmp_version] : (($snmp_version !== '') ? $snmp_version : Yii::t('yii', '(not set)'));
+                            ?></td>
                             <th><?= Yii::t('network', 'SNMP encryption') ?></th>
                             <td><?= empty($credential->snmp_encryption) ? Yii::t('app', 'No') : $credential->snmp_encryption ?></td>
                         </tr>
