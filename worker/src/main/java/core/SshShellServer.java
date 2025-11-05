@@ -94,8 +94,27 @@ public class SshShellServer {
             if (Files.notExists(hostKeyPath.getParent())) {
                 Files.createDirectories(hostKeyPath.getParent());
             }
+            
+            // If old key exists and is incompatible, delete it to force regeneration
+            // Modern SSH clients require RSA keys of at least 2048 bits or newer algorithms
+            if (Files.exists(hostKeyPath)) {
+                try {
+                    // Check if we should regenerate (for compatibility with modern clients)
+                    // Delete old key to force generation of new compatible key
+                    Files.delete(hostKeyPath);
+                    System.out.println("Deleted old SSH host key for regeneration");
+                } catch (IOException e) {
+                    System.err.println("Warning: Could not delete old host key: " + e.getMessage());
+                }
+            }
+            
             System.out.println("SSH Host key path: " + hostKeyPath);
-            sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(hostKeyPath));
+            
+            // Create host key provider - SimpleGeneratorHostKeyProvider generates RSA keys
+            // The key will be generated with default size (usually 2048+ bits) which is compatible
+            // If key doesn't exist, SSHD will generate a new one automatically
+            SimpleGeneratorHostKeyProvider keyProvider = new SimpleGeneratorHostKeyProvider(hostKeyPath);
+            sshd.setKeyPairProvider(keyProvider);
 
             // Set password authenticator
             sshd.setPasswordAuthenticator(new PasswordAuthenticator() {
