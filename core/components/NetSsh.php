@@ -130,15 +130,26 @@ class NetSsh
     public function schedulerExec(string $command):array
     {
         /** Wait for initial prompt - increase timeout for first read */
-        $this->ssh->setTimeout(10);
-        $this->ssh->read('/.*[>]\s$/', $this->ssh::READ_REGEX);
+        $this->ssh->setTimeout(15);
+        
+        /** Read initial prompt - may timeout if server doesn't send prompt immediately */
+        try {
+            $this->ssh->read('/.*[>]\s$/', $this->ssh::READ_REGEX);
+        } catch (\Exception $e) {
+            // If read fails, try to continue anyway - server might have sent prompt already
+            error_log("Warning: Could not read initial prompt: " . $e->getMessage());
+        }
         
         /** Execute command */
         $this->ssh->write("{$command}\n");
         $this->ssh->setTimeout(30);
 
         /** Read command output */
-        $output = $this->ssh->read('/.*[>]\s$/', $this->ssh::READ_REGEX);
+        try {
+            $output = $this->ssh->read('/.*[>]\s$/', $this->ssh::READ_REGEX);
+        } catch (\Exception $e) {
+            throw new \Exception("Failed to read command output: " . $e->getMessage());
+        }
 
         /** Show console output if error occurs */
         if (!preg_match('/{.*}/i', $output, $json)) {

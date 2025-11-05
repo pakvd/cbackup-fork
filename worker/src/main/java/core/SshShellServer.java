@@ -155,7 +155,18 @@ public class SshShellServer {
             sshd.setShellFactory(new ShellFactory() {
                 @Override
                 public Command createShell(ChannelSession channel) {
-                    return new CbackupShellHandler(scheduler);
+                    try {
+                        if (scheduler == null) {
+                            System.err.println("ERROR: Scheduler is null when creating shell!");
+                            throw new IllegalStateException("Scheduler is not initialized");
+                        }
+                        System.out.println("Creating shell for channel session");
+                        return new CbackupShellHandler(scheduler);
+                    } catch (Exception e) {
+                        System.err.println("ERROR creating shell: " + e.getMessage());
+                        e.printStackTrace();
+                        throw new RuntimeException("Failed to create shell", e);
+                    }
                 }
             });
 

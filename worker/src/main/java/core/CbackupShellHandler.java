@@ -64,17 +64,31 @@ public class CbackupShellHandler implements Command {
 
     @Override
     public void start(ChannelSession channel, Environment env) throws IOException {
+        System.out.println("CbackupShellHandler.start() called");
+        if (scheduler == null) {
+            throw new IOException("Scheduler is not initialized");
+        }
         executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-                 PrintWriter writer = new PrintWriter(new OutputStreamWriter(out), true);
-                 PrintWriter errorWriter = new PrintWriter(new OutputStreamWriter(err), true)) {
+            System.out.println("Shell handler thread started");
+            PrintWriter writer = null;
+            PrintWriter errorWriter = null;
+            BufferedReader reader = null;
+            try {
+                // Initialize streams
+                reader = new BufferedReader(new InputStreamReader(in));
+                writer = new PrintWriter(new OutputStreamWriter(out), true);
+                errorWriter = new PrintWriter(new OutputStreamWriter(err), true);
                 
-                // Send welcome message and prompt
+                System.out.println("Streams initialized, sending welcome message");
+                
+                // Send welcome message and prompt immediately
                 writer.println("cBackup Shell - Type 'help' for available commands");
                 writer.flush();
                 writer.print("cbackup> ");
                 writer.flush();
+                
+                System.out.println("Welcome message sent");
 
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -103,6 +117,15 @@ public class CbackupShellHandler implements Command {
                 System.err.println("Error in SSH handler: " + e.getMessage());
                 e.printStackTrace();
             } finally {
+                // Close streams
+                try {
+                    if (reader != null) reader.close();
+                    if (writer != null) writer.close();
+                    if (errorWriter != null) errorWriter.close();
+                } catch (IOException e) {
+                    System.err.println("Error closing streams: " + e.getMessage());
+                }
+                
                 if (callback != null) {
                     callback.onExit(0);
                 }
