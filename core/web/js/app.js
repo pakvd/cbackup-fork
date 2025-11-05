@@ -679,20 +679,38 @@ var modalFormHandler = function ($form_obj, $modal_id, $btn_id) {
     toastr.clear();
 
     /** Submit form */
+    console.log('modalFormHandler called for form:', $form.attr('id'));
+    console.log('Form action:', $form.attr('action'));
+    
     // Ensure select2 values are included in form data
     $form.find('.select2').each(function() {
         var $select = $(this);
         if ($select.hasClass('select2-hidden-accessible')) {
             // If select2 is initialized, ensure value is set on original select
-            var val = $select.select2('val');
-            if (val) {
-                $select.val(val).trigger('change');
+            try {
+                var val = $select.select2('val');
+                console.log('Select2 value for', $select.attr('name'), ':', val);
+                if (val) {
+                    $select.val(val).trigger('change');
+                }
+            } catch(e) {
+                console.warn('Error getting select2 value:', e);
             }
         }
     });
     
     var formData = $form.serialize();
     console.log('Sending form data:', formData);
+    console.log('Form data length:', formData.length);
+    
+    if (!formData || formData.length === 0) {
+        console.error('Form data is empty! Form elements:', $form.find('input, select, textarea').length);
+        toastr.error('Form data is empty. Please check the form fields.', '', {toastClass: 'no-shadow', timeOut: 0, closeButton: true});
+        if ($btn_lock) {
+            $btn_lock.stop();
+        }
+        return;
+    }
     
     $.ajax({
         url    : $form.attr('action'),

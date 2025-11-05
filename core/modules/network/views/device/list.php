@@ -199,6 +199,9 @@ $this->registerJs(/** @lang JavaScript */
                 success: function(data) {
                     // Insert HTML content (renderAjax includes scripts in the response)
                     modal.find("#form_modal_content").html(data);
+                    
+                    console.log("Modal content loaded, form exists:", $("#device_form").length);
+                    
                     modal.modal("show");
                     
                     // Init select2 after modal is shown and scripts are executed
@@ -208,6 +211,7 @@ $this->registerJs(/** @lang JavaScript */
                             $("#form_modal .select2").select2({
                                 width: "100%"
                             });
+                            console.log("Select2 initialized");
                         } else {
                             // Select2 should be loaded on main page, retry
                             console.warn("select2 not available, retrying...");
@@ -216,11 +220,16 @@ $this->registerJs(/** @lang JavaScript */
                                     $("#form_modal .select2").select2({
                                         width: "100%"
                                     });
+                                    console.log("Select2 initialized on retry");
                                 } else {
                                     console.error("select2 library not found. Make sure Select2Asset is registered.");
                                 }
                             }, 500);
                         }
+                        
+                        // Verify form is accessible
+                        var form = $("#device_form");
+                        console.log("Form check after load:", form.length, "Action:", form.attr("action"));
                     }, 300);
                 },
                 error: function(xhr, status, error) {
@@ -235,69 +244,86 @@ $this->registerJs(/** @lang JavaScript */
             return false;
         });
         
-        /** Device form AJAX submit handler */
+        /** Device form AJAX submit handler - use event delegation for dynamically loaded content */
         $(document).on("submit", "#device_form", function (e) {
+            console.log("Form submit triggered!");
             e.preventDefault();
+            e.stopPropagation();
             
             var form = $(this);
+            console.log("Form found:", form.length);
+            console.log("Form action:", form.attr("action"));
             
-            // Get fields - try different selectors in case IDs are different
+            // Get fields - try different selectors
             var vendorField = form.find("select[name=\"Device[vendor]\"]");
-            if (vendorField.length === 0) {
-                vendorField = form.find("#device-vendor");
-            }
             if (vendorField.length === 0) {
                 vendorField = form.find("select[name*=\"vendor\"]").first();
             }
+            console.log("Vendor field found:", vendorField.length, "Value:", vendorField.val());
             
             var modelField = form.find("input[name=\"Device[model]\"]");
             if (modelField.length === 0) {
-                modelField = form.find("#device-model");
-            }
-            if (modelField.length === 0) {
                 modelField = form.find("input[name*=\"model\"]").first();
             }
+            console.log("Model field found:", modelField.length, "Value:", modelField.val());
             
             // Client-side validation
             var hasErrors = false;
             
             // Check vendor - for select2, need to get value properly
-            var vendorValue = vendorField.val();
-            if (vendorField.hasClass("select2")) {
-                // If select2 is initialized, get value from select2
-                if (typeof vendorField.select2 !== "undefined") {
-                    vendorValue = vendorField.select2("val");
+            var vendorValue = vendorField.length > 0 ? vendorField.val() : null;
+            if (vendorField.length > 0 && typeof $.fn.select2 !== "undefined") {
+                try {
+                    var select2Val = vendorField.select2("val");
+                    console.log("Select2 value:", select2Val);
+                    if (select2Val) {
+                        vendorValue = select2Val;
+                    }
+                } catch(e) {
+                    console.warn("Error getting select2 value:", e);
                 }
             }
+            console.log("Final vendor value:", vendorValue);
             
             if (!vendorValue || vendorValue === "" || vendorValue === "0" || vendorValue === null) {
-                vendorField.closest(".form-group").addClass("has-error");
+                if (vendorField.length > 0) {
+                    vendorField.closest(".form-group").addClass("has-error");
+                }
                 toastr.error("Vendor is required", "", {toastClass: "no-shadow", timeOut: 5000, closeButton: true});
                 hasErrors = true;
             } else {
-                vendorField.closest(".form-group").removeClass("has-error");
+                if (vendorField.length > 0) {
+                    vendorField.closest(".form-group").removeClass("has-error");
+                }
             }
             
             // Check model
-            var modelValue = modelField.val();
+            var modelValue = modelField.length > 0 ? modelField.val() : "";
             if (!modelValue || modelValue.trim() === "") {
-                modelField.closest(".form-group").addClass("has-error");
+                if (modelField.length > 0) {
+                    modelField.closest(".form-group").addClass("has-error");
+                }
                 toastr.error("Model is required", "", {toastClass: "no-shadow", timeOut: 5000, closeButton: true});
                 hasErrors = true;
             } else {
-                modelField.closest(".form-group").removeClass("has-error");
+                if (modelField.length > 0) {
+                    modelField.closest(".form-group").removeClass("has-error");
+                }
             }
             
             if (hasErrors) {
+                console.log("Validation failed, not submitting");
                 return false;
             }
             
             // Debug: log form data before sending
-            console.log("Form data:", form.serialize());
+            var formData = form.serialize();
+            console.log("Form data:", formData);
             console.log("Vendor value:", vendorValue);
             console.log("Model value:", modelValue);
             
             // If validation passes, submit via modalFormHandler
+            console.log("Calling modalFormHandler");
             modalFormHandler(form, "form_modal", "save");
             return false;
         });
