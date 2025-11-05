@@ -87,8 +87,8 @@ class NodeSearch extends Node
                 'attributes'   => [
                     'id', 'hostname', 'location', 'modified',
                     'device_name' => [
-                        'asc'  => ['d.model' => SORT_ASC],
-                        'desc' => ['d.model' => SORT_DESC]
+                        'asc'  => ['d.name' => SORT_ASC],
+                        'desc' => ['d.name' => SORT_DESC]
                     ],
                     // sort by IP
                     'ip' => [
@@ -123,7 +123,7 @@ class NodeSearch extends Node
                 break;
                 case 'hostname': $query->andFilterWhere(['like', 'hostname', $this->search_string]); break;
                 case 'location': $query->andFilterWhere(['like', 'location', $this->search_string]); break;
-                case 'device': $query->orFilterWhere(['like', "CONCAT(d.vendor, ' ', d.model)", $this->search_string]); break;
+                case 'device': $query->orFilterWhere(['like', "CONCAT(d.vendor, ' ', d.name)", $this->search_string]); break;
             }
         }
 
@@ -170,7 +170,7 @@ class NodeSearch extends Node
             ->andFilterWhere(['like', 'location', $this->location])
             ->andFilterWhere(['like', 'contact', $this->contact])
             ->andFilterWhere(['like', 'sys_description', $this->sys_description])
-            ->orFilterWhere(['like', "CONCAT(d.vendor, ' ', d.model)", $this->device_name]);
+            ->orFilterWhere(['like', "CONCAT(d.vendor, ' ', d.name)", $this->device_name]);
 
         return $dataProvider;
     }

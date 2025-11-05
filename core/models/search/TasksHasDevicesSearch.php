@@ -73,8 +73,8 @@ class TasksHasDevicesSearch extends TasksHasDevices
                 'attributes'   => [
                     'task_name',
                     'device_name' => [
-                        'asc'  => ['d.model' => SORT_ASC],
-                        'desc' => ['d.model' => SORT_DESC],
+                        'asc'  => ['d.name' => SORT_ASC],
+                        'desc' => ['d.name' => SORT_DESC],
                     ],
                     'worker_name' => [
                         'asc'  => ['w.name' => SORT_ASC],
@@ -100,7 +100,7 @@ class TasksHasDevicesSearch extends TasksHasDevices
 
         $query->andFilterWhere(['like', 'tasks_has_devices.task_name', $this->task_name])
             ->andFilterWhere(['like', 'w.name', $this->worker_name])
-            ->orFilterWhere(['like', "CONCAT(d.vendor, ' ', d.model)", $this->device_name]);
+            ->orFilterWhere(['like', "CONCAT(d.vendor, ' ', d.name)", $this->device_name]);
 
         return $dataProvider;
     }

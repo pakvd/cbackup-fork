@@ -130,14 +130,15 @@ $this->registerJs(
                                     'attribute' => 'location',
                                     'value'     => function($data) { /** @var $data \app\models\Node */
                                         $prepend_location = (!is_null($data->prepend_location)) ? $data->prepend_location : Y::param('defaultPrependLocation');
-                                        return "{$prepend_location} {$data->location}";
+                                        $prepend_location = ($prepend_location !== null && $prepend_location !== '') ? $prepend_location : '';
+                                        return trim("{$prepend_location} {$data->location}");
                                     }
                                 ],
                                 [
                                     'attribute' => 'device_name',
                                     'options'   => ['style' => 'width:17%'],
                                     'value'     => function($data) { /** @var $data \app\models\Node */
-                                        return "{$data->device->vendor} {$data->device->model}";
+                                        return (isset($data->device)) ? "{$data->device->vendor} {$data->device->name}" : '';
                                     }
                                 ],
                                 [

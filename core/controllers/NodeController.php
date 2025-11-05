@@ -169,7 +169,7 @@ class NodeController extends Controller
             'model'       => $model,
             'networks'    => Network::find()->select('network')->indexBy('id')->asArray()->column(),
             'credentials' => Credential::find()->select('name')->indexBy('id')->asArray()->column(),
-            'devices'     => ArrayHelper::map(Device::find()->all(), 'id', 'model', 'vendor')
+            'devices'     => ArrayHelper::map(Device::find()->all(), 'id', 'name', 'vendor')
         ]);
     }
 
@@ -213,7 +213,7 @@ class NodeController extends Controller
             'model'       => $model,
             'networks'    => Network::find()->select('network')->indexBy('id')->asArray()->column(),
             'credentials' => Credential::find()->select('name')->indexBy('id')->asArray()->column(),
-            'devices'     => ArrayHelper::map(Device::find()->all(), 'id', 'model', 'vendor')
+            'devices'     => ArrayHelper::map(Device::find()->all(), 'id', 'name', 'vendor')
         ]);
 
     }

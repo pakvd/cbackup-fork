@@ -233,7 +233,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     </tr>
                     <tr>
                         <th><?= Yii::t('network', 'Device') ?></th>
-                        <td><?= $data->device->vendor . ' ' . $data->device->model ?></td>
+                        <td><?= (isset($data->device)) ? $data->device->vendor . ' ' . $data->device->name : Yii::t('yii', '(not set)') ?></td>
                     </tr>
                     <tr>
                         <th><?= Yii::t('network', 'Serial') ?></th>
@@ -778,7 +778,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
                                         /** Check if config exists in database or file */
                                         if (($task_info->put == 'file' && !file_exists(Y::param('dataPath') . $file_path)) ||
-                                            ($task_info->put == 'db'   && is_null($data->outBackups[0]->config))) {
+                                            ($task_info->put == 'db'   && (!isset($data->outBackups[0]) || is_null($data->outBackups[0]->config)))) {
 
                                             $conf_exists = Html::tag('i', '', [
                                                 'class'               => 'fa fa-warning text-danger cursor-question',

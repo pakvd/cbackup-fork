@@ -180,7 +180,7 @@ class NodeController extends Controller
                 'node.*',
                 'CONCAT_WS(" ", prepend_location, location) AS full_location',
                 'c.name AS node_credentials',
-                'CONCAT_WS(" ", d.vendor, d.model) AS device_name',
+                'CONCAT_WS(" ", d.vendor, d.name) AS device_name',
                 'n.network AS network_address',
                 'n.description AS network_description'])
             ->joinWith(['device d', 'credential c', 'network n'], false);
@@ -342,7 +342,7 @@ class NodeController extends Controller
                 'node.*',
                 'CONCAT_WS(" ", prepend_location, location) AS full_location',
                 'c.name AS node_credentials',
-                'CONCAT_WS(" ", d.vendor, d.model) AS device_name',
+                'CONCAT_WS(" ", d.vendor, d.name) AS device_name',
                 'n.network AS network_address',
                 'n.description AS network_description'])
             ->andFilterWhere([
