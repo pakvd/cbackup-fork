@@ -153,7 +153,8 @@ $this->params['breadcrumbs'][] = $this->title;
                         <td>
                             <div id="credentials_text">
                                 <?php
-                                    if (!is_null($data->network_id)) {
+                                    $credential_text = Yii::t('yii', '(not set)');
+                                    if (!is_null($data->network_id) && isset($data->network->credential)) {
                                         $credential_text = $data->network->credential->name . ' ' . Html::tag('i', '', [
                                             'class'          => 'fa fa-info-circle',
                                             'data-toggle'    => 'tooltip',
@@ -162,7 +163,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                         ]);
                                     }
 
-                                    if (!is_null($data->credential_id)) {
+                                    if (!is_null($data->credential_id) && !empty($data->credential_id) && isset($data->credential)) {
                                         $credential_text = $data->credential->name;
                                     }
 
@@ -181,7 +182,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                         ?>
                                     </span>
                                     <?php
-                                        $selected_credential = (!is_null($data->credential_id) && isset($credentials[$data->credential_id])) ? $data->credential_id : null;
+                                        $selected_credential = (!is_null($data->credential_id) && !empty($data->credential_id) && isset($credentials[$data->credential_id])) ? $data->credential_id : null;
                                         echo Html::dropDownList('', $selected_credential, $credentials, [
                                             'id'               => 'credentials_select_box',
                                             'class'            => 'select2-small',
@@ -644,9 +645,9 @@ $this->params['breadcrumbs'][] = $this->title;
                 </div>
                 <div class="tab-pane" id="tab_5" style="padding: 10px">
                     <?php Pjax::begin(['id' => 'auth-template-pjax', 'enablePushState' => false]); ?>
-                        <?php if (is_null($data->auth_template_name)): ?>
+                        <?php if (is_null($data->auth_template_name) || empty($data->auth_template_name)): ?>
                             <div class="callout callout-info" style="margin-bottom: 10px;">
-                                <p><?= Yii::t('network', 'Selected node use default device auth template - <b>{0}</b>', $data->device->auth_template_name) ?></p>
+                                <p><?= Yii::t('network', 'Selected node use default device auth template - <b>{0}</b>', (isset($data->device) && isset($data->device->auth_template_name)) ? $data->device->auth_template_name : '') ?></p>
                             </div>
                         <?php endif; ?>
                         <div class="input-group" style="margin-bottom: 10px ">
@@ -662,7 +663,10 @@ $this->params['breadcrumbs'][] = $this->title;
                                 ?>
                             </span>
                             <?php
-                                $selected_template = (!is_null($data->auth_template_name) && !empty($data->auth_template_name) && isset($templates[$data->auth_template_name])) ? $data->auth_template_name : null;
+                                $selected_template = null;
+                                if (!is_null($data->auth_template_name) && !empty($data->auth_template_name) && $data->auth_template_name !== '' && isset($templates[$data->auth_template_name])) {
+                                    $selected_template = $data->auth_template_name;
+                                }
                                 // Templates are already filtered in controller
                                 echo Html::dropDownList('', $selected_template, $templates, [
                                     'id'                 => 'auth_template_list',
@@ -672,7 +676,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                     'data-allow-clear'   => 'true',
                                     'data-url'           => Url::to(['network/device/ajax-auth-template-preview']),
                                     'data-update-url'    => Url::to(['network/device/ajax-update-templates']),
-                                    'data-default-value' => (isset($data->device->auth_template_name)) ? $data->device->auth_template_name : ''
+                                    'data-default-value' => (isset($data->device) && isset($data->device->auth_template_name) && !empty($data->device->auth_template_name)) ? $data->device->auth_template_name : ''
                                 ]);
                             ?>
                             <div class="input-group-btn">
@@ -701,7 +705,12 @@ $this->params['breadcrumbs'][] = $this->title;
                                 <?= Yii::t('network', 'Input data') ?>
                             </div>
                             <?php
-                                $template = (!is_null($data->auth_template_name)) ? $data->authTemplateName->auth_sequence : $data->device->authTemplateName->auth_sequence;
+                                $template = '';
+                                if (!is_null($data->auth_template_name) && !empty($data->auth_template_name) && isset($data->authTemplateName)) {
+                                    $template = $data->authTemplateName->auth_sequence;
+                                } elseif (isset($data->device) && isset($data->device->authTemplateName)) {
+                                    $template = $data->device->authTemplateName->auth_sequence;
+                                }
                                 echo Html::textarea('', $template, [
                                     'id'       => 'auth_textarea',
                                     'class'    => 'form-control auth_sequence',
