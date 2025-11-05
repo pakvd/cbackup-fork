@@ -24,6 +24,8 @@ import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.shell.ShellFactory;
 import org.apache.sshd.server.channel.ChannelSession;
+import org.apache.sshd.common.config.keys.KeyUtils;
+import org.apache.sshd.common.session.SessionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -34,6 +36,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
 
 /**
  * SSH Shell Server using Apache MINA SSHD
@@ -110,10 +114,17 @@ public class SshShellServer {
             
             System.out.println("SSH Host key path: " + hostKeyPath);
             
-            // Create host key provider - SimpleGeneratorHostKeyProvider generates RSA keys
-            // The key will be generated with default size (usually 2048+ bits) which is compatible
-            // If key doesn't exist, SSHD will generate a new one automatically
-            SimpleGeneratorHostKeyProvider keyProvider = new SimpleGeneratorHostKeyProvider(hostKeyPath);
+            // Create host key provider that generates RSA keys (not ECDSA)
+            // phpseclib 2.0.9 only supports ssh-rsa, so we must generate RSA keys
+            SimpleGeneratorHostKeyProvider keyProvider = new SimpleGeneratorHostKeyProvider(hostKeyPath) {
+                @Override
+                public KeyPair loadKey(SessionContext session, String keyType) throws IOException, GeneralSecurityException {
+                    // Force RSA key generation for compatibility with phpseclib
+                    // Always use RSA regardless of requested key type
+                    return super.loadKey(session, KeyUtils.RSA_ALGORITHM);
+                }
+            };
+            
             sshd.setKeyPairProvider(keyProvider);
 
             // Set password authenticator
