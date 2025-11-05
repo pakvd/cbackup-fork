@@ -221,6 +221,12 @@ class CredentialTest extends Model
             $ssh_session = new SSH2($this->ip, $this->port_ssh, 2);
             $ssh_session->setTimeout(2);
 
+            // Configure preferred algorithms for compatibility with modern SSH servers
+            $preferredAlgorithms = [
+                'hostkey' => ['ssh-rsa', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519']
+            ];
+            $ssh_session->setPreferredAlgorithms($preferredAlgorithms);
+
             if ($ssh_session->login($this->ssh_login, $this->ssh_password)) {
 
                 $ssh_status = 1;

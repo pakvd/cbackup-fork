@@ -96,6 +96,15 @@ class NetSsh
         /** Connect to device */
         $this->ssh = new SSH2($this->ip, $this->port, $this->timeout);
 
+        /** Configure preferred algorithms for compatibility with SSHD server
+         *  Support RSA host keys (which SSHD generates by default)
+         *  This resolves "No compatible server host key algorithms found" error
+         */
+        $preferredAlgorithms = [
+            'hostkey' => ['ssh-rsa', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519']
+        ];
+        $this->ssh->setPreferredAlgorithms($preferredAlgorithms);
+
         /** Show exception if can not login */
         if (!$this->ssh->login($this->username, $this->password)) {
             throw new \Exception("Authentication failed. Host:{$this->ip}:{$this->port}. Check SSH credentials");
