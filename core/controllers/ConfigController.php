@@ -106,7 +106,7 @@ class ConfigController extends Controller
 
                 foreach ($validator->attributes as $key => $value) {
 
-                    $model = $this->findModel($key);
+                    $model = $this->findModel($key, true); // Allow creation if not exists
 
                     if ($model->value != $value) {
 
@@ -372,9 +372,17 @@ class ConfigController extends Controller
      * @return Config the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function findModel($id)
+    protected function findModel($id, $createIfNotExists = false)
     {
-        if (($model = Config::findOne($id)) !== null) {
+        // Config uses 'key' as identifier, not 'id'
+        $model = Config::findOne(['key' => $id]);
+        if ($model !== null) {
+            return $model;
+        } elseif ($createIfNotExists) {
+            // Create new config entry if it doesn't exist
+            $model = new Config();
+            $model->key = $id;
+            $model->value = '';
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');

@@ -45,8 +45,17 @@ $this->registerJsFile('@web/js/config/script.js', ['depends' => \app\assets\Alph
 
 <div class="row">
     <div class="col-md-12">
-        <?php Pjax::begin(['id' => 'config-pjax']); ?>
-            <?php $form = ActiveForm::begin(['id' => 'config']); ?>
+        <?php Pjax::begin([
+            'id' => 'config-pjax',
+            'timeout' => 10000,
+            'enablePushState' => false
+        ]); ?>
+            <?php $form = ActiveForm::begin([
+                'id' => 'config',
+                'action' => Url::to(['/config/index']),
+                'method' => 'post',
+                'options' => ['data-pjax' => true]
+            ]); ?>
 
 <!---------------------------------------------------- GENERAL BOX ---------------------------------------------------->
                 <div class="box box-default">
