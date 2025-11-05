@@ -119,47 +119,31 @@ public class SshShellServer {
             
             System.out.println("SSH Host key path: " + hostKeyPath);
             
-            // Configure SSHD to use only RSA signature algorithms
-            // phpseclib 2.0.9 only supports ssh-rsa
-            // Note: We'll rely on the key provider to supply RSA keys, and SSHD will use appropriate signatures
+            // Generate RSA key immediately to avoid race conditions during connection
+            System.out.println("Generating RSA host key (2048 bits)...");
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+            keyGen.initialize(2048);
+            final KeyPair rsaKeyPair = keyGen.generateKeyPair();
             
-            // Create a simple RSA-only key provider that always generates RSA
-            // Never use SimpleGeneratorHostKeyProvider.loadKey() as it may generate ECDSA
+            // Verify it's RSA
+            String actualType = KeyUtils.getKeyType(rsaKeyPair);
+            if (!KeyUtils.RSA_ALGORITHM.equals(actualType)) {
+                throw new GeneralSecurityException("Generated key is not RSA: " + actualType);
+            }
+            System.out.println("RSA host key generated successfully (type: " + actualType + ")");
+            
+            // Create a simple RSA-only key provider that always returns the pre-generated RSA key
             KeyPairProvider keyProvider = new KeyPairProvider() {
-                private KeyPair cachedRsaKey = null;
-                private final Object lock = new Object();
-                
                 @Override
                 public KeyPair loadKey(SessionContext session, String keyType) throws IOException, GeneralSecurityException {
                     // Always return RSA key regardless of requested type
-                    synchronized (lock) {
-                        if (cachedRsaKey == null) {
-                            System.out.println("Generating new RSA host key (2048 bits)");
-                            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-                            keyGen.initialize(2048);
-                            cachedRsaKey = keyGen.generateKeyPair();
-                            
-                            // Verify it's RSA
-                            String actualType = KeyUtils.getKeyType(cachedRsaKey);
-                            if (!KeyUtils.RSA_ALGORITHM.equals(actualType)) {
-                                throw new GeneralSecurityException("Generated key is not RSA: " + actualType);
-                            }
-                            System.out.println("RSA host key generated successfully (type: " + actualType + ")");
-                        }
-                        return cachedRsaKey;
-                    }
+                    return rsaKeyPair;
                 }
                 
                 @Override
                 public Iterable<KeyPair> loadKeys(SessionContext session) {
-                    try {
-                        KeyPair rsaKey = loadKey(session, KeyUtils.RSA_ALGORITHM);
-                        return Collections.singletonList(rsaKey);
-                    } catch (Exception e) {
-                        System.err.println("Error loading RSA key: " + e.getMessage());
-                        e.printStackTrace();
-                        return Collections.emptyList();
-                    }
+                    // Always return the pre-generated RSA key
+                    return Collections.singletonList(rsaKeyPair);
                 }
             };
             
