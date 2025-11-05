@@ -201,6 +201,15 @@ $this->registerJs(/** @lang JavaScript */
                     modal.find("#form_modal_content").html(data);
                     
                     console.log("Modal content loaded, form exists:", $("#device_form").length);
+                    console.log("Save button exists:", $("#save").length);
+                    
+                    // Verify form structure
+                    var form = $("#device_form");
+                    if (form.length > 0) {
+                        console.log("Form action:", form.attr("action"));
+                        console.log("Form method:", form.attr("method"));
+                        console.log("Form fields:", form.find("input, select, textarea").length);
+                    }
                     
                     modal.modal("show");
                     
@@ -244,11 +253,29 @@ $this->registerJs(/** @lang JavaScript */
             return false;
         });
         
+        /** Handle button click as alternative to form submit */
+        $(document).on("click", "#save", function(e) {
+            console.log("Save button clicked!");
+            e.preventDefault();
+            e.stopPropagation();
+            
+            var form = $("#device_form");
+            if (form.length === 0) {
+                console.error("Form not found!");
+                return false;
+            }
+            
+            // Trigger form submit
+            form.trigger("submit");
+            return false;
+        });
+        
         /** Device form AJAX submit handler - use event delegation for dynamically loaded content */
         $(document).on("submit", "#device_form", function (e) {
             console.log("Form submit triggered!");
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             
             var form = $(this);
             console.log("Form found:", form.length);
