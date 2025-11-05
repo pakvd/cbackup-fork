@@ -128,16 +128,12 @@
             <artifactId>jaxb-runtime</artifactId>
             <version>2.3.5</version>
         </dependency>
-        <!-- Spring shell service -->
-        <!-- NOTE: Library temporarily disabled due to unavailability in Maven repositories -->
-        <!-- SSH shell functionality will be disabled until library is available -->
-        <!--
+        <!-- Apache MINA SSHD for SSH shell server -->
         <dependency>
-            <groupId>io.github.anand1st</groupId>
-            <artifactId>sshd-shell-spring-boot-starter</artifactId>
-            <version>2.6.0</version>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+            <version>2.11.0</version>
         </dependency>
-        -->
     </dependencies>
 
     <!-- Explicit dependency overrides to fix security vulnerabilities -->
