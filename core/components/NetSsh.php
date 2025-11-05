@@ -64,7 +64,9 @@ class NetSsh
      */
     public function __construct()
     {
-        $this->ip       = \Y::param('javaHost', '127.0.0.1');
+        // In Docker environment, use service name 'worker' instead of '127.0.0.1'
+        $defaultHost = (getenv('DOCKER_CONTAINER') === 'true' || getenv('container') === 'docker') ? 'worker' : '127.0.0.1';
+        $this->ip       = \Y::param('javaHost', $defaultHost);
         $this->port     = \Y::param('javaSchedulerPort');
         $this->username = \Y::param('javaSchedulerUsername');
         $this->password = \Y::param('javaSchedulerPassword');
@@ -84,7 +86,8 @@ class NetSsh
 
         /** Validate connection parameters */
         if (empty($this->ip)) {
-            $this->ip = '127.0.0.1'; // Default value
+            // In Docker environment, use service name 'worker' instead of '127.0.0.1'
+            $this->ip = (getenv('DOCKER_CONTAINER') === 'true' || getenv('container') === 'docker') ? 'worker' : '127.0.0.1';
         }
         if (empty($this->port) || $this->port === null) {
             throw new \Exception("Java scheduler port (javaSchedulerPort) is not configured. Please set it in System > Configuration.");

@@ -310,12 +310,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     ('sshBeforeSendDelay', '100'),
                     ('systemLogLevel', 'info'),
                     ('defaultPrependLocation', ''),
-                    ('javaHost', '127.0.0.1'),
+                    ('javaHost', (getenv('DOCKER_CONTAINER') === 'true' || getenv('container') === 'docker') ? 'worker' : '127.0.0.1'),
                     ('javaServerUsername', ''),
                     ('javaServerPort', '8080'),
                     ('javaServerPassword', ''),
                     ('javaSchedulerUsername', ''),
-                    ('javaSchedulerPort', '8081'),
+                    ('javaSchedulerPort', '8437'),
                     ('javaSchedulerPassword', '')");
                 
                 // Create out_backup table for storing backup configurations

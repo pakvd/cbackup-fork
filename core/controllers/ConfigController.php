@@ -78,8 +78,19 @@ class ConfigController extends Controller
         $errors  = [];
 
         // Set default value for javaHost if not exists in database
+        // In Docker environment, use service name 'worker' instead of '127.0.0.1'
+        $defaultHost = (getenv('DOCKER_CONTAINER') === 'true' || getenv('container') === 'docker') ? 'worker' : '127.0.0.1';
         if (!isset($data['javaHost']) || empty($data['javaHost'])) {
-            $data['javaHost'] = '127.0.0.1';
+            $data['javaHost'] = $defaultHost;
+        } elseif (getenv('DOCKER_CONTAINER') === 'true' && isset($data['javaHost']) && $data['javaHost'] === '127.0.0.1') {
+            // Auto-update if Docker environment detected and old value is localhost
+            $data['javaHost'] = 'worker';
+            // Save to database
+            $model = Config::findOne(['key' => 'javaHost']);
+            if ($model) {
+                $model->value = 'worker';
+                $model->save(false);
+            }
         }
 
         $config->checkApplicationProperties($data);

@@ -49,8 +49,10 @@ class Service
      */
     public function __construct()
     {
+        // In Docker environment, use service name 'worker' instead of '127.0.0.1'
+        $defaultHost = (getenv('DOCKER_CONTAINER') === 'true' || getenv('container') === 'docker') ? 'worker' : '127.0.0.1';
         $options   = [
-            'ip'       => \Y::param('javaHost', '127.0.0.1'),
+            'ip'       => \Y::param('javaHost', $defaultHost),
             'port'     => \Y::param('javaServerPort'),
             'username' => \Y::param('javaServerUsername'),
             'password' => \Y::param('javaServerPassword')
