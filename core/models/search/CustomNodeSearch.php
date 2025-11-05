@@ -69,7 +69,7 @@ class CustomNodeSearch extends Node
         $exclusions = Exclusion::find()->select('ip')->asArray()->all();
         $query      = Node::find()->select('node.id, ip, node.network_id, device_id, hostname, location');
 
-        $query->joinWith(['network n', 'device d']);
+        $query->joinWith(['network n', 'device d', 'device.vendor v']);
 
         $this->load($params);
 
@@ -94,6 +94,23 @@ class CustomNodeSearch extends Node
             foreach ($data as $key => $entry) {
                 $task_exists = TasksHasNodes::find()->where(['node_id' => $entry['id'], 'task_name' => $params['task_name']])->exists();
                 $data[$key] += ($task_exists) ? ['node_has_task' => true] : ['node_has_task' => false];
+                
+                // Ensure device and vendor data are properly structured
+                if (isset($entry['device_id']) && !empty($entry['device_id'])) {
+                    $device = \app\models\Device::find()->with('vendor')->where(['id' => $entry['device_id']])->asArray()->one();
+                    if ($device) {
+                        $data[$key]['device'] = [
+                            'id' => $device['id'],
+                            'name' => $device['name'] ?? '',
+                            'model' => $device['name'] ?? '',
+                            'vendor' => isset($device['vendor']) && isset($device['vendor']['name']) ? $device['vendor']['name'] : 'Unknown'
+                        ];
+                    } else {
+                        $data[$key]['device'] = ['vendor' => 'Unknown', 'model' => ''];
+                    }
+                } else {
+                    $data[$key]['device'] = ['vendor' => 'Unknown', 'model' => ''];
+                }
             }
 
         }

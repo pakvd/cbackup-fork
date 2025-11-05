@@ -206,7 +206,7 @@ $this->registerJs(
                                             <td><?= (!empty($node['network']['network'])) ? $node['network']['network'] : Yii::t('yii', '(not set)') ?></td>
                                             <td><?= (!empty($node['hostname'])) ? $node['hostname'] : Yii::t('yii', '(not set)') ?></td>
                                             <td><?= $node['ip'] ?></td>
-                                            <td><?= "{$node['device']['vendor']} - {$node['device']['model']}" ?></td>
+                                            <td><?= (isset($node['device']['vendor']) ? $node['device']['vendor'] : 'Unknown') . ' - ' . (isset($node['device']['model']) ? $node['device']['model'] : (isset($node['device']['name']) ? $node['device']['name'] : '')) ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                     <tr>
