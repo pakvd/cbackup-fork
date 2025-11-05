@@ -67,7 +67,7 @@ class Device extends ActiveRecord
     public function rules()
     {
         return [
-            [['vendor_id', 'name', 'auth_template_name'], 'required'],
+            [['vendor_id', 'name'], 'required'],
             [['name'], 'filter', 'filter' => 'trim'],
             [['auth_template_name'], 'string', 'max' => 64],
             [['name'], 'string', 'max' => 128],

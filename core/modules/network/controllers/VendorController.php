@@ -186,7 +186,8 @@ class VendorController extends Controller
      */
     protected function findModel($name)
     {
-        if (($model = Vendor::findOne($name)) !== null) {
+        // Vendor uses name as identifier, not id
+        if (($model = Vendor::findOne(['name' => $name])) !== null) {
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');

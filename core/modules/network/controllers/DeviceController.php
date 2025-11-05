@@ -485,7 +485,27 @@ class DeviceController extends Controller
                 
                 // Convert model to name if model is provided
                 if (isset($_POST['Device']['model']) && !isset($_POST['Device']['name'])) {
-                    $model->name = $_POST['Device']['model'];
+                    $model->name = trim($_POST['Device']['model']);
+                }
+                
+                // Set auth_template_name to null if empty (it's optional)
+                if (empty($model->auth_template_name)) {
+                    $model->auth_template_name = null;
+                }
+
+                // Validate after conversion
+                if (!$model->vendor_id) {
+                    return Json::encode([
+                        'status' => 'validation_failed',
+                        'error' => ['vendor' => [Yii::t('app', 'Vendor is required')]]
+                    ]);
+                }
+                
+                if (empty($model->name)) {
+                    return Json::encode([
+                        'status' => 'validation_failed',
+                        'error' => ['model' => [Yii::t('app', 'Model is required')]]
+                    ]);
                 }
 
                 if ($model->validate()) {
@@ -499,7 +519,7 @@ class DeviceController extends Controller
                     } else {
                         $status = Json::encode([
                             'status' => 'error',
-                            'msg'    => Yii::t('app', 'An error occurred while adding record.')
+                            'msg'    => Yii::t('app', 'An error occurred while adding record.') . ' ' . print_r($model->errors, true)
                         ]);
                     }
 

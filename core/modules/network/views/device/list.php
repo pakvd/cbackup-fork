@@ -137,7 +137,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 <i class="fa fa-list"></i><h3 class="box-title box-title-align"><?= Yii::t('network', 'Vendors') ?></h3>
                 <div class="box-tools pull-right">
                     <?php
-                        echo Html::a('<i class="fa fa-plus"></i>', ['vendor/add'], [
+                        echo Html::a('<i class="fa fa-plus"></i>', ['/network/vendor/add'], [
                             'class' => 'btn btn-box-tool',
                             'style' => 'margin-top: 7px;',
                             'title' => Yii::t('app', 'Add')
@@ -152,9 +152,10 @@ $this->params['breadcrumbs'][] = $this->title;
                             <td><?= $vendor['name'] ?></td>
                             <td class="narrow">
                                 <?php
-                                    echo Html::a('<i class="fa fa-pencil-square-o"></i>', ['vendor/edit', 'name' => $vendor['name']],
-                                        ['title' => Yii::t('app', 'Edit')]
-                                    );
+                                    echo Html::a('<i class="fa fa-pencil-square-o"></i>', ['/network/vendor/edit', 'name' => $vendor['name']], [
+                                        'title' => Yii::t('app', 'Edit'),
+                                        'data-pjax' => '0'
+                                    ]);
                                 ?>
                             </td>
                         </tr>

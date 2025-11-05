@@ -44,7 +44,8 @@ use app\helpers\FormHelper;
         <?php $form = ActiveForm::begin([
             'id' => 'device_form',
             'enableClientValidation' => false,
-            'action' => Url::to(['device/ajax-add-device'])
+            'action' => Url::to(['/network/device/ajax-add-device']),
+            'enableAjaxValidation' => false
         ]); ?>
         <div class="modal-body">
             <div class="row">
