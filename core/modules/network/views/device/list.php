@@ -32,6 +32,8 @@ use yii\widgets\Pjax;
 
 // Register Select2Asset for select2 dropdowns
 app\assets\Select2Asset::register($this);
+// Register LaddaAsset for button spinners
+app\assets\LaddaAsset::register($this);
 
 $this->title = Yii::t('app', 'Devices');
 $this->params['breadcrumbs'][] = ['label' => Yii::t('app', 'Inventory' )];

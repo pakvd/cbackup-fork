@@ -664,7 +664,14 @@ var gridLaddaSpinner = function ($btn_id) {
 var modalFormHandler = function ($form_obj, $modal_id, $btn_id) {
 
     var $form     = $form_obj;
-    var $btn_lock = Ladda.create(document.querySelector('#' + $btn_id));
+    var $btn_lock = null;
+    // Check if Ladda is available before using it
+    if (typeof Ladda !== 'undefined') {
+        var btnElement = document.querySelector('#' + $btn_id);
+        if (btnElement) {
+            $btn_lock = Ladda.create(btnElement);
+        }
+    }
     var $model    = $form.attr('id').split('_')[0];
 
     /** Clear error */
@@ -677,13 +684,17 @@ var modalFormHandler = function ($form_obj, $modal_id, $btn_id) {
         type   : 'post',
         data   : $form.serialize(),
         beforeSend: function() {
-            $btn_lock.start();
+            if ($btn_lock) {
+                $btn_lock.start();
+            }
         },
         success: function (data) {
             if (isJson(data)) {
 
                 var json = $.parseJSON(data);
-                $btn_lock.stop();
+                if ($btn_lock) {
+                    $btn_lock.stop();
+                }
 
                 if (json['status'] === 'validation_failed') {
                     $.each(json['error'], function(id, msg) {
@@ -698,12 +709,16 @@ var modalFormHandler = function ($form_obj, $modal_id, $btn_id) {
 
             } else {
                 toastr.warning(data, '', {toastClass: 'no-shadow', timeOut: 0, closeButton: true});
-                $btn_lock.stop();
+                if ($btn_lock) {
+                    $btn_lock.stop();
+                }
             }
         },
         error : function (data) {
             toastr.error(data.responseText, '', {toastClass: 'no-shadow', timeOut: 0, closeButton: true});
-            $btn_lock.stop();
+            if ($btn_lock) {
+                $btn_lock.stop();
+            }
         }
     });
 

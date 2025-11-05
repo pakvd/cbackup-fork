@@ -32,6 +32,8 @@ use app\helpers\FormHelper;
 
 // Register Select2Asset for select2 dropdowns in modal
 app\assets\Select2Asset::register($this);
+// Register LaddaAsset for button spinners
+app\assets\LaddaAsset::register($this);
 ?>
 
 <div class="modal-dialog">
