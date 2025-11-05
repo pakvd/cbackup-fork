@@ -441,11 +441,8 @@ $this->params['breadcrumbs'][] = $this->title;
                                                     </div>
                                                     <div class="subnets hide">
                                                         <?php
-                                                            // Filter out any entries with empty or null keys
-                                                            $filtered_networks = array_filter($networks, function($key) {
-                                                                return !empty($key) && $key !== '';
-                                                            }, ARRAY_FILTER_USE_KEY);
-                                                            echo Html::dropDownList('', '', $filtered_networks, [
+                                                            // Networks are already filtered in controller, but use as-is for safety
+                                                            echo Html::dropDownList('', '', $networks, [
                                                                 'prompt'           => '',
                                                                 'class'            => 'select2-small-search network_select',
                                                                 'data-placeholder' => Yii::t('network', 'Choose network'),
@@ -666,11 +663,8 @@ $this->params['breadcrumbs'][] = $this->title;
                             </span>
                             <?php
                                 $selected_template = (!is_null($data->auth_template_name) && !empty($data->auth_template_name) && isset($templates[$data->auth_template_name])) ? $data->auth_template_name : null;
-                                // Filter out any entries with empty or null keys
-                                $filtered_templates = array_filter($templates, function($key) {
-                                    return !empty($key) && $key !== '';
-                                }, ARRAY_FILTER_USE_KEY);
-                                echo Html::dropDownList('', $selected_template, $filtered_templates, [
+                                // Templates are already filtered in controller
+                                echo Html::dropDownList('', $selected_template, $templates, [
                                     'id'                 => 'auth_template_list',
                                     'class'              => 'select2-normal',
                                     'prompt'             => '',

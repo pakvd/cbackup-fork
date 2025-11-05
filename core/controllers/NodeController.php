@@ -242,11 +242,32 @@ class NodeController extends Controller
         ]);
 
         /** Create networks array for dropdownlist */
-        $networks = Network::find()->select(['id', 'network', 'description'])->asArray()->all();
-        $networks = ArrayHelper::map($networks, 'id', function ($data) {
-            $description = (!empty($data['description'])) ? "- {$data['description']}" : "";
-            return "{$data['network']} {$description}";
-        });
+        $networks_raw = Network::find()->select(['id', 'network', 'description'])->asArray()->all();
+        $networks = [];
+        foreach ($networks_raw as $network) {
+            if (!empty($network['id']) && $network['id'] !== null) {
+                $description = (!empty($network['description'])) ? "- {$network['description']}" : "";
+                $networks[$network['id']] = "{$network['network']} {$description}";
+            }
+        }
+
+        /** Prepare templates array, filtering out empty keys */
+        $templates_raw = DeviceAuthTemplate::find()->select('name')->indexBy('name')->asArray()->column();
+        $templates = [];
+        foreach ($templates_raw as $key => $value) {
+            if (!empty($key) && $key !== '') {
+                $templates[$key] = $value;
+            }
+        }
+
+        /** Prepare credentials array, filtering out empty keys */
+        $credentials_raw = Credential::find()->select('name')->indexBy('id')->asArray()->column();
+        $credentials = [];
+        foreach ($credentials_raw as $key => $value) {
+            if (!empty($key) && $key !== null && $key !== '') {
+                $credentials[$key] = $value;
+            }
+        }
 
         return $this->render('view', [
             'data'         => $data,
@@ -255,16 +276,10 @@ class NodeController extends Controller
             'task_info'    => Task::findOne('backup'),
             'commit_log'   => (Config::isGitRepo()) ? Node::getBackupCommitLog($id) : null,
             'int_provider' => $int_provider,
-            'templates'    => array_filter(DeviceAuthTemplate::find()->select('name')->indexBy('name')->asArray()->column(), function($key) {
-                return !empty($key) && $key !== '';
-            }, ARRAY_FILTER_USE_KEY),
-            'networks'     => array_filter($networks, function($key) {
-                return !empty($key) && $key !== '';
-            }, ARRAY_FILTER_USE_KEY),
+            'templates'    => $templates,
+            'networks'     => $networks,
             'plugins'      => Plugin::find()->where(['enabled' => '1', 'widget' => 'node'])->all(),
-            'credentials'  => array_filter(Credential::find()->select('name')->indexBy('id')->asArray()->column(), function($key) {
-                return !empty($key) && $key !== null && $key !== '';
-            }, ARRAY_FILTER_USE_KEY),
+            'credentials'  => $credentials,
         ]);
     }
 
