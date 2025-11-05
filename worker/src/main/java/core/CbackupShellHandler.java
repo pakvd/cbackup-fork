@@ -70,13 +70,17 @@ public class CbackupShellHandler implements Command {
                  PrintWriter writer = new PrintWriter(new OutputStreamWriter(out), true);
                  PrintWriter errorWriter = new PrintWriter(new OutputStreamWriter(err), true)) {
                 
+                // Send welcome message and prompt
                 writer.println("cBackup Shell - Type 'help' for available commands");
+                writer.flush();
                 writer.print("cbackup> ");
+                writer.flush();
 
                 String line;
                 while ((line = reader.readLine()) != null) {
                     if (line.trim().isEmpty()) {
                         writer.print("cbackup> ");
+                        writer.flush();
                         continue;
                     }
 
@@ -87,11 +91,17 @@ public class CbackupShellHandler implements Command {
                     String result = processCommand(command, args, errorWriter);
                     if (result != null) {
                         writer.println(result);
+                        writer.flush();
                     }
                     writer.print("cbackup> ");
+                    writer.flush();
                 }
             } catch (IOException e) {
-                // Connection closed
+                // Connection closed - this is normal when client disconnects
+                System.out.println("SSH connection closed: " + e.getMessage());
+            } catch (Exception e) {
+                System.err.println("Error in SSH handler: " + e.getMessage());
+                e.printStackTrace();
             } finally {
                 if (callback != null) {
                     callback.onExit(0);

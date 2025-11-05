@@ -57,7 +57,7 @@ class NetSsh
     /**
      * @var int
      */
-    private $timeout = 2;
+    private $timeout = 5;
 
     /**
      * NetSsh constructor.
@@ -129,10 +129,13 @@ class NetSsh
      */
     public function schedulerExec(string $command):array
     {
-        /** Execute command */
-        $this->ssh->read('/.*[>]\s$/', $this->ssh::READ_REGEX);
-        $this->ssh->write("{$command}\n");
+        /** Wait for initial prompt - increase timeout for first read */
         $this->ssh->setTimeout(10);
+        $this->ssh->read('/.*[>]\s$/', $this->ssh::READ_REGEX);
+        
+        /** Execute command */
+        $this->ssh->write("{$command}\n");
+        $this->ssh->setTimeout(30);
 
         /** Read command output */
         $output = $this->ssh->read('/.*[>]\s$/', $this->ssh::READ_REGEX);
