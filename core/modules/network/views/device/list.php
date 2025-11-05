@@ -44,7 +44,12 @@ $this->params['breadcrumbs'][] = $this->title;
                         <?= Html::a(Yii::t('network', 'View unknown devices'), ['unknown-list'], ['class' => 'btn btn-sm btn-default'])?>
                         <span class="btn btn-sm <?= ($unkn_count > 0) ? 'btn-warning' : 'bg-light-black' ?>" style="cursor: default"><?= $unkn_count ?></span>
                     </div>
-                    <?= Html::a(Yii::t('network', 'Add device'), ['add'], ['class' => 'btn btn-sm bg-light-blue']) ?>
+                    <?= Html::a(Yii::t('network', 'Add device'), ['ajax-add-device'], [
+                        'class'         => 'btn btn-sm bg-light-blue',
+                        'data-toggle'   => 'modal',
+                        'data-target'   => '#form_modal',
+                        'data-backdrop' => 'static'
+                    ]) ?>
                 </div>
             </div>
             <div class="box-body no-padding">
@@ -160,3 +165,61 @@ $this->params['breadcrumbs'][] = $this->title;
     </div>
 
 </div>
+
+<!-- Modal form container -->
+<div class="modal fade" id="form_modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div id="form_modal_content"></div>
+    </div>
+</div>
+
+<?php
+$this->registerJs(/** @lang JavaScript */
+    "
+        /** Load modal content via AJAX */
+        $(document).on('click', 'a[data-target=\"#form_modal\"]', function (e) {
+            var modal = $('#form_modal');
+            var url = $(this).attr('href');
+            
+            modal.find('#form_modal_content').load(url, function() {
+                modal.modal('show');
+            });
+            
+            return false;
+        });
+        
+        /** Device form AJAX submit handler */
+        $(document).on('submit', '#device_form', function () {
+            modalFormHandler($(this), 'form_modal', 'save');
+            return false;
+        });
+        
+        /** Modal loaded event handler */
+        $(document).on('loaded.bs.modal', '.modal', function () {
+            /** Init select2 */
+            $('.select2').select2({
+                width: '100%'
+            });
+        });
+        
+        /** Modal hidden event handler */
+        $(document).on('hidden.bs.modal', '#form_modal', function () {
+            var toast = $('#toast-container');
+            
+            /** Reload grid after record was added */
+            if (toast.find('.toast-success, .toast-warning').is(':visible')) {
+                $.pjax.reload({container: '#device-pjax', timeout: 10000});
+                location.reload(); // Reload page to update vendors list
+            }
+            
+            /** Remove errors after modal close */
+            toast.find('.toast-error').fadeOut(1000, function() { $(this).remove(); });
+        });
+        
+        /** Init select2 on page load */
+        $('.select2').select2({
+            width: '100%'
+        });
+    "
+);
+?>

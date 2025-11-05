@@ -18,6 +18,7 @@
  */
 
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\bootstrap\ActiveForm;
 use app\helpers\FormHelper;
 
@@ -40,7 +41,11 @@ use app\helpers\FormHelper;
                 <?= Yii::t('network', 'Add device') ?>
             </h4>
         </div>
-        <?php $form = ActiveForm::begin(['id' => 'device_form', 'enableClientValidation' => false]); ?>
+        <?php $form = ActiveForm::begin([
+            'id' => 'device_form',
+            'enableClientValidation' => false,
+            'action' => Url::to(['device/ajax-add-device'])
+        ]); ?>
         <div class="modal-body">
             <div class="row">
                 <div class="col-md-12">

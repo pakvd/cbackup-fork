@@ -466,6 +466,27 @@ class DeviceController extends Controller
         if (isset($_POST['Device'])) {
 
             if ($model->load(Yii::$app->request->post())) {
+                
+                // Convert vendor name to vendor_id if vendor is provided as name
+                if (isset($_POST['Device']['vendor']) && !isset($_POST['Device']['vendor_id'])) {
+                    $vendorName = $_POST['Device']['vendor'];
+                    if (!empty($vendorName)) {
+                        $vendor = Vendor::findOne(['name' => $vendorName]);
+                        if ($vendor) {
+                            $model->vendor_id = $vendor->id;
+                        } else {
+                            return Json::encode([
+                                'status' => 'validation_failed',
+                                'error' => ['vendor' => [Yii::t('app', 'Vendor not found')]]
+                            ]);
+                        }
+                    }
+                }
+                
+                // Convert model to name if model is provided
+                if (isset($_POST['Device']['model']) && !isset($_POST['Device']['name'])) {
+                    $model->name = $_POST['Device']['model'];
+                }
 
                 if ($model->validate()) {
 
