@@ -137,17 +137,25 @@ public class SshShellServer {
                 @Override
                 public KeyPair loadKey(SessionContext session, String keyType) throws IOException, GeneralSecurityException {
                     // Always return RSA key regardless of requested type
+                    System.out.println("KeyPairProvider.loadKey() called with keyType: " + keyType + ", returning RSA key");
                     return rsaKeyPair;
                 }
                 
                 @Override
                 public Iterable<KeyPair> loadKeys(SessionContext session) {
                     // Always return the pre-generated RSA key
+                    System.out.println("KeyPairProvider.loadKeys() called, returning RSA key");
                     return Collections.singletonList(rsaKeyPair);
                 }
             };
             
             sshd.setKeyPairProvider(keyProvider);
+            
+            // Log key information for debugging
+            System.out.println("SSH Server configured with RSA key:");
+            System.out.println("  Key Type: " + KeyUtils.getKeyType(rsaKeyPair));
+            System.out.println("  Public Key Algorithm: " + rsaKeyPair.getPublic().getAlgorithm());
+            System.out.println("  Private Key Algorithm: " + rsaKeyPair.getPrivate().getAlgorithm());
 
             // Set password authenticator
             sshd.setPasswordAuthenticator(new PasswordAuthenticator() {
