@@ -238,10 +238,17 @@ public class WorkerDiscovery extends AbstractCoreUnit implements Callable<Boolea
          */
         try {
 
+            String nodeIp = this.coordinates.get("nodeIp");
+            if (nodeIp == null || nodeIp.isEmpty()) {
+                String emptyIpMessage = "Task " + this.coordinates.get("taskName") + ": nodeIp is empty or null.";
+                this.logMessage("ERROR", "DISCOVERY", emptyIpMessage);
+                return false;
+            }
+
             this.snmp = new Snmp(new DefaultUdpTransportMapping());
             this.snmp.listen();
 
-            Address address = new UdpAddress(this.coordinates.get("nodeIp") + "/" + this.snmpPort.toString());
+            Address address = new UdpAddress(nodeIp + "/" + this.snmpPort.toString());
 
             this.target = new CommunityTarget<>();
             this.target.setAddress(address);

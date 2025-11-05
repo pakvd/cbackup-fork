@@ -291,10 +291,17 @@ public class GeneralSnmp extends AbstractProtocol {
          */
         try {
 
+            String nodeIp = this.coordinates.get("nodeIp");
+            if (nodeIp == null || nodeIp.isEmpty()) {
+                String emptyIpMessage = "Task " + this.coordinates.get("taskName") + ", node " + this.coordinates.get("nodeId") + ": nodeIp is empty or null.";
+                this.logMessage("ERROR", "NODE REQUEST", emptyIpMessage);
+                return false;
+            }
+
             this.snmp = new Snmp(new DefaultUdpTransportMapping());
             this.snmp.listen();
 
-            Address address = new UdpAddress(this.coordinates.get("nodeIp") + "/" + this.snmpPort.toString());
+            Address address = new UdpAddress(nodeIp + "/" + this.snmpPort.toString());
 
             this.target = new CommunityTarget<Address>();
             this.target.setAddress(address);

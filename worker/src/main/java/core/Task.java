@@ -567,11 +567,18 @@ public class Task extends AbstractCoreUnit implements Runnable
         // Add Workers to Executor
         // noinspection Java8MapForEach
         this.nodes.entrySet().forEach(node -> {
+            String nodeIp = node.getValue().get("ip");
+            if (nodeIp == null || nodeIp.isEmpty()) {
+                String emptyIpMessage = "Task " + this.coordinates.get("taskName") + ", node " + node.getKey() + ": IP address is empty or null.";
+                this.logMessage("ERROR", "WORKER SPAWN", emptyIpMessage);
+                return; // Skip this node
+            }
+
             Map<String, String> currentCoord = new HashMap<>();
             currentCoord.putAll(this.coordinates);
             currentCoord.put("nodeId", node.getKey());
             currentCoord.put("workerId", node.getValue().get("id"));
-            currentCoord.put("nodeIp", node.getValue().get("ip"));
+            currentCoord.put("nodeIp", nodeIp);
 
             currentCoord.put("nodeVendor", node.getValue().get("vendor"));
             currentCoord.put("nodeModel", node.getValue().get("model"));

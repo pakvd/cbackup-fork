@@ -352,7 +352,14 @@ public class GeneralTelnet extends AbstractProtocol {
          * Object Expect4j init
          */
         try {
-            this.expect = ExpectUtils.telnet(this.coordinates.get("nodeIp"), this.telnetPort);
+            String nodeIp = this.coordinates.get("nodeIp");
+            if (nodeIp == null || nodeIp.isEmpty()) {
+                String emptyIpMessage = "Task " + this.coordinates.get("taskName") + ", node " + this.coordinates.get("nodeId") + ": nodeIp is empty or null.";
+                this.logException("ERROR", "NODE REQUEST", emptyIpMessage, new Exception("Empty nodeIp"));
+                return false;
+            }
+
+            this.expect = ExpectUtils.telnet(nodeIp, this.telnetPort);
             this.expect.setDefaultTimeout(this.telnetTimeout);
         }
         catch (Exception e) {

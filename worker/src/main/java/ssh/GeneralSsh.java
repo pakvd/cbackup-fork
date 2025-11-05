@@ -338,8 +338,15 @@ public class GeneralSsh extends AbstractProtocol {
          */
         try {
 
+            String nodeIp = this.coordinates.get("nodeIp");
+            if (nodeIp == null || nodeIp.isEmpty()) {
+                String emptyIpMessage = "Task " + this.coordinates.get("taskName") + ", node " + this.coordinates.get("nodeId") + ": nodeIp is empty or null.";
+                this.logException("ERROR", "NODE REQUEST", emptyIpMessage, new Exception("Empty nodeIp"));
+                return false;
+            }
+
             this.jsch = new JSch();
-            this.session = jsch.getSession(this.sshLogin, this.coordinates.get("nodeIp"), this.sshPort);
+            this.session = jsch.getSession(this.sshLogin, nodeIp, this.sshPort);
             this.session.setPassword(this.sshPassword);
 
             if (this.sshPassword != null) {

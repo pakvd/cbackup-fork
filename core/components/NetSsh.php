@@ -82,6 +82,14 @@ class NetSsh
         /** Set custom init options */
         array_walk($options, function($value, $option) { $this->$option = $value; });
 
+        /** Validate connection parameters */
+        if (empty($this->ip) || $this->ip === null) {
+            throw new \Exception("Java host (javaHost) is not configured. Please set it in System > Configuration.");
+        }
+        if (empty($this->port) || $this->port === null) {
+            throw new \Exception("Java scheduler port (javaSchedulerPort) is not configured. Please set it in System > Configuration.");
+        }
+
         /** Connect to device */
         $this->ssh = new SSH2($this->ip, $this->port, $this->timeout);
 
