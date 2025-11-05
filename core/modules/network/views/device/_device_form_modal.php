@@ -29,6 +29,9 @@ use app\helpers\FormHelper;
  * @var $vendors       array
  * @var $templates     array
  */
+
+// Register Select2Asset for select2 dropdowns in modal
+app\assets\Select2Asset::register($this);
 ?>
 
 <div class="modal-dialog">

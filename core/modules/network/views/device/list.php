@@ -29,6 +29,10 @@ use yii\widgets\Pjax;
  * @var $vendors        array
  * @var $unkn_count     integer
  */
+
+// Register Select2Asset for select2 dropdowns
+app\assets\Select2Asset::register($this);
+
 $this->title = Yii::t('app', 'Devices');
 $this->params['breadcrumbs'][] = ['label' => Yii::t('app', 'Inventory' )];
 $this->params['breadcrumbs'][] = $this->title;
@@ -184,6 +188,12 @@ $this->registerJs(/** @lang JavaScript */
             
             modal.find('#form_modal_content').load(url, function() {
                 modal.modal('show');
+                // Init select2 after modal content is loaded
+                if (typeof $.fn.select2 !== 'undefined') {
+                    $('#form_modal .select2').select2({
+                        width: '100%'
+                    });
+                }
             });
             
             return false;
@@ -195,12 +205,14 @@ $this->registerJs(/** @lang JavaScript */
             return false;
         });
         
-        /** Modal loaded event handler */
-        $(document).on('loaded.bs.modal', '.modal', function () {
-            /** Init select2 */
-            $('.select2').select2({
-                width: '100%'
-            });
+        /** Modal shown event handler - init select2 when modal is fully shown */
+        $(document).on('shown.bs.modal', '#form_modal', function () {
+            // Check if select2 is available and init
+            if (typeof $.fn.select2 !== 'undefined') {
+                $('#form_modal .select2').select2({
+                    width: '100%'
+                });
+            }
         });
         
         /** Modal hidden event handler */
@@ -217,10 +229,12 @@ $this->registerJs(/** @lang JavaScript */
             toast.find('.toast-error').fadeOut(1000, function() { $(this).remove(); });
         });
         
-        /** Init select2 on page load */
-        $('.select2').select2({
-            width: '100%'
-        });
+        /** Init select2 on page load - only if select2 is available */
+        if (typeof $.fn.select2 !== 'undefined') {
+            $('.select2').select2({
+                width: '100%'
+            });
+        }
     "
 );
 ?>
