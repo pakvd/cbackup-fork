@@ -28,11 +28,14 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN chown -R appuser:appuser /app
 
+# Create .ssh directory for SSH host keys (will be used by appuser)
+RUN mkdir -p /app/.ssh && chown -R appuser:appuser /app/.ssh && chmod 700 /app/.ssh
+
 # Note: USER is set to root temporarily in docker-compose.yml
 # Entrypoint script will switch to appuser before starting Java
 USER root
 
-EXPOSE 8080
+EXPOSE 8437
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 

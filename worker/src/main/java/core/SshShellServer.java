@@ -39,6 +39,7 @@ import java.nio.file.Paths;
  * SSH Shell Server using Apache MINA SSHD
  */
 @Component
+@org.springframework.context.annotation.DependsOn("scheduler")
 public class SshShellServer {
 
     @Autowired
@@ -68,16 +69,32 @@ public class SshShellServer {
             return;
         }
 
+        if (scheduler == null) {
+            System.err.println("ERROR: Scheduler is not initialized. Cannot start SSH Shell Server.");
+            return;
+        }
+
         try {
             sshd = SshServer.setUpDefaultServer();
             sshd.setHost(host);
             sshd.setPort(port);
 
-            // Generate host key if not exists
-            Path hostKeyPath = Paths.get(System.getProperty("user.home"), ".ssh", "cbackup_hostkey");
+            // Use /app/.ssh for host key storage (works in Docker)
+            // Fallback to user.home if /app doesn't exist (for non-Docker environments)
+            String homeDir = System.getProperty("user.home");
+            Path hostKeyPath;
+            if (Files.exists(Paths.get("/app"))) {
+                // Docker environment
+                hostKeyPath = Paths.get("/app", ".ssh", "cbackup_hostkey");
+            } else {
+                // Non-Docker environment
+                hostKeyPath = Paths.get(homeDir, ".ssh", "cbackup_hostkey");
+            }
+            
             if (Files.notExists(hostKeyPath.getParent())) {
                 Files.createDirectories(hostKeyPath.getParent());
             }
+            System.out.println("SSH Host key path: " + hostKeyPath);
             sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(hostKeyPath));
 
             // Set password authenticator
@@ -99,10 +116,11 @@ public class SshShellServer {
 
             // Start server
             sshd.start();
-            System.out.println("SSH Shell Server started on " + host + ":" + port);
+            System.out.println("SSH Shell Server started successfully on " + host + ":" + port);
         } catch (Exception e) {
             System.err.println("Failed to start SSH Shell Server: " + e.getMessage());
             e.printStackTrace();
+            // Don't throw exception - let application continue even if SSH fails
         }
     }
 
