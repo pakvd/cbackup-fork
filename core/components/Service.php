@@ -41,7 +41,7 @@ class Service
     /**
      * @var array
      */
-    private $supported_services = ['system.d', 'init.d'];
+    private $supported_services = ['systemd', 'initd'];
 
     /**
      * Services constructor.
@@ -62,8 +62,12 @@ class Service
         $this->service_type = $this->getServiceType();
 
         /** Check if service is supported */
-        if (!in_array($this->service_type, $this->supported_services)) {
-            throw new \Exception(Yii::t('app', 'Service type {0} currently is not supported by cBackup.', $this->service_type));
+        if (!in_array($this->service_type, $this->supported_services, true)) {
+            throw new \Exception(Yii::t(
+                'app',
+                'Service type {0} currently is not supported by cBackup. Supported types: {1}.',
+                [$this->service_type, implode(', ', $this->supported_services)]
+            ));
         }
 
     }
@@ -109,7 +113,18 @@ class Service
             throw new \Exception(Yii::t('app', 'Service type is not defined in settings ini-file'));
         }
 
-        return $ini['serviceType'];
+        $serviceType = strtolower(trim($ini['serviceType']));
+        $normalizedType = str_replace(['.', '-', ' '], '', $serviceType);
+
+        if (in_array($normalizedType, $this->supported_services, true)) {
+            return $normalizedType;
+        }
+
+        throw new \Exception(Yii::t(
+            'app',
+            'Service type {0} currently is not supported by cBackup. Supported types: {1}.',
+            [$serviceType, implode(', ', $this->supported_services)]
+        ));
 
     }
 
