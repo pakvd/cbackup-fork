@@ -176,7 +176,7 @@ spring.main.banner-mode=off
 
 # cBackup Configuration
 cbackup.scheme=http
-cbackup.site=http://web/index.php
+cbackup.site=http://nginx/index.php
 cbackup.token=
 EOF
     # Set ownership and permissions for newly created file
@@ -226,7 +226,7 @@ spring.main.banner-mode=off
 
 # cBackup Configuration
 cbackup.scheme=http
-cbackup.site=http://web/index.php
+cbackup.site=http://nginx/index.php
 cbackup.token=D0B221B7-B88A-4DF1-8254-76E8766F285B
 EOF
     echo "✓ Created application.properties"

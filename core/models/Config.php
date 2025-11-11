@@ -281,7 +281,7 @@ class Config extends ActiveRecord
                     . "\n"
                     . "# cBackup Configuration\n"
                     . "cbackup.scheme=http\n"
-                    . "cbackup.site=http://web/index.php\n"
+                    . "cbackup.site=http://nginx/index.php\n"
                     . "cbackup.token=\n";
             }
         }

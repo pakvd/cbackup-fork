@@ -876,7 +876,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         . "\n"
                         . "# cBackup Configuration\n"
                         . "cbackup.scheme=http\n"
-                        . "cbackup.site=http://web/index.php\n"
+                        . "cbackup.site=http://nginx/index.php\n"
                         . "cbackup.token=\n";
                     
                     if (@file_put_contents($propsFile, $content)) {
