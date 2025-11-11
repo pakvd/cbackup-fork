@@ -429,7 +429,8 @@ class ScheduleController extends Controller
 
         try {
 
-            $command  = (new NetSsh())->init()->schedulerExec("cbackup runtask {$task_name} -json");
+            $ssh = (new NetSsh())->init();
+            $command = $ssh->schedulerExec("cbackup runtask {$task_name} -json");
             $response = ['status' => 'success', 'msg' => Yii::t('network', 'Task <b>{0}</b> successfully started', $task_name)];
 
             /** Throw exception if error occurs */
@@ -439,7 +440,40 @@ class ScheduleController extends Controller
 
             /** Show warning if something went wrong */
             if ($command['success'] && !$command['object']) {
-                $response = ['status' => 'warning', 'msg' => Yii::t('network', 'Something went wrong. Java response: {0}', $command['message'])];
+                $message = $command['message'];
+
+                /** Try to auto-start scheduler if it's not running */
+                if (stripos($message, 'Scheduler is not started') !== false) {
+                    $start = $ssh->schedulerExec('cbackup start -json');
+
+                    if (!$start['success']) {
+                        throw new \Exception(Yii::t('network', 'Unable to start scheduler automatically: {0}', $start['exception']));
+                    }
+
+                    if ($start['success'] && $start['object']) {
+                        /** Retry task launch once scheduler is started */
+                        $command = $ssh->schedulerExec("cbackup runtask {$task_name} -json");
+
+                        if (!$command['success']) {
+                            throw new \Exception($command['exception']);
+                        }
+
+                        if ($command['success'] && !$command['object']) {
+                            $message = $command['message'];
+                        } else {
+                            $message = null;
+                        }
+                    } else {
+                        $message = $start['message'];
+                    }
+                }
+
+                if (!empty($message)) {
+                    $response = [
+                        'status' => 'warning',
+                        'msg'    => Yii::t('network', 'Something went wrong. Java response: {0}', $message)
+                    ];
+                }
             }
 
         } catch (\Exception $e) {
