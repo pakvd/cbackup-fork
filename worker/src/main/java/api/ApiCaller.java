@@ -24,6 +24,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -38,6 +40,76 @@ public final class ApiCaller {
      * Instances not allowed
      */
     private ApiCaller() {}
+
+    private static class SiteComponents {
+        String scheme;
+        String host;
+        String path;
+        int port = -1;
+    }
+
+    /**
+     * Parse site / scheme configuration allowing variants like:
+     *   - host only: "nginx"
+     *   - host with path: "nginx/index.php"
+     *   - full URL: "http://web/index.php"
+     *
+     * Returns normalized scheme, host, optional path and port.
+     */
+    private static SiteComponents parseSite(ApiRequest request) throws URISyntaxException {
+
+        String configuredSite = request.coordinates.get("site");
+        String configuredScheme = request.coordinates.get("scheme");
+
+        if (configuredSite == null || configuredSite.trim().isEmpty()) {
+            throw new URISyntaxException("", "Site coordinate is empty");
+        }
+
+        String site = configuredSite.trim();
+        String schemeForUri = (configuredScheme != null && !configuredScheme.isEmpty()) ? configuredScheme : "http";
+
+        URI uri;
+        if (site.contains("://")) {
+            uri = new URI(site);
+            if (uri.getScheme() != null && !uri.getScheme().isEmpty()) {
+                schemeForUri = uri.getScheme();
+            }
+        } else {
+            uri = new URI(schemeForUri + "://" + site);
+        }
+
+        SiteComponents result = new SiteComponents();
+        result.scheme = schemeForUri;
+        result.port = uri.getPort();
+
+        String host = uri.getHost();
+        String path = uri.getRawPath();
+
+        // Handle values like "nginx/index.php" where URI parser is fine,
+        // but if host is still empty (e.g. in rare edge cases) fall back to manual parsing
+        if ((host == null || host.isEmpty()) && site.contains("/")) {
+            int firstSlash = site.indexOf('/');
+            host = site.substring(0, firstSlash);
+            path = site.substring(firstSlash);
+        }
+
+        if (host == null || host.isEmpty()) {
+            throw new URISyntaxException(site, "Host part of the site is empty");
+        }
+
+        if (path != null && path.isEmpty()) {
+            path = null;
+        }
+
+        if (path != null && !path.startsWith("/")) {
+            path = "/" + path;
+        }
+
+        result.host = host;
+        result.path = path;
+
+        return result;
+    }
 
     /**
      * Http request GET-POST router
@@ -90,26 +162,17 @@ public final class ApiCaller {
         //noinspection Duplicates
         try {
 
-            /*
-             * Create URI
-             * Handle site as hostname or hostname/path
-             */
-            String site = request.coordinates.get("site");
-            String host;
-            String path = null;
-            
-            // Check if site contains a path
-            if (site != null && site.contains("/")) {
-                int firstSlash = site.indexOf("/");
-                host = site.substring(0, firstSlash);
-                path = site.substring(firstSlash);
-            } else {
-                host = site;
+            SiteComponents site = parseSite(request);
+
+            URIBuilder uribuilder = new URIBuilder()
+                    .setScheme(site.scheme)
+                    .setHost(site.host);
+
+            if (site.port > -1) {
+                uribuilder.setPort(site.port);
             }
-            
-            URIBuilder uribuilder = new URIBuilder().setScheme(request.coordinates.get("scheme")).setHost(host);
-            if (path != null) {
-                uribuilder.setPath(path);
+            if (site.path != null) {
+                uribuilder.setPath(site.path);
             }
             uribuilder.addParameter("r", request.apiMethod);
 
@@ -199,26 +262,17 @@ public final class ApiCaller {
         //noinspection Duplicates
         try {
 
-            /*
-             * Create URI
-             * Handle site as hostname or hostname/path
-             */
-            String site = request.coordinates.get("site");
-            String host;
-            String path = null;
-            
-            // Check if site contains a path
-            if (site != null && site.contains("/")) {
-                int firstSlash = site.indexOf("/");
-                host = site.substring(0, firstSlash);
-                path = site.substring(firstSlash);
-            } else {
-                host = site;
+            SiteComponents site = parseSite(request);
+
+            URIBuilder uribuilder = new URIBuilder()
+                    .setScheme(site.scheme)
+                    .setHost(site.host);
+
+            if (site.port > -1) {
+                uribuilder.setPort(site.port);
             }
-            
-            URIBuilder uribuilder = new URIBuilder().setScheme(request.coordinates.get("scheme")).setHost(host);
-            if (path != null) {
-                uribuilder.setPath(path);
+            if (site.path != null) {
+                uribuilder.setPath(site.path);
             }
             uribuilder.addParameter("r", request.apiMethod);
 
