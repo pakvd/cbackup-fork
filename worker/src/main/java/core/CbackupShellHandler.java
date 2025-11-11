@@ -166,8 +166,8 @@ public class CbackupShellHandler implements Command {
                     
                     String result = processCommand(command, args, errorWriter);
                     if (result != null && !result.isEmpty()) {
-                        System.out.println("Command result length: " + result.length());
-                        System.err.println("Command result length: " + result.length() + " (stderr)");
+                        System.out.println("Command result: " + result);
+                        System.err.println("Command result: " + result + " (stderr)");
                         writer.println(result);
                         writer.flush();
                     } else {
